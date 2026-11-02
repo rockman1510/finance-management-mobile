@@ -1,0 +1,41 @@
+# Applied on top of detekt's default configuration (buildUponDefaultConfig = true).
+complexity:
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+    ignoreAnnotated: ['Composable']
+  LongMethod:
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable', 'Test']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+  MatchingDeclarationName:
+    active: false
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated: ['Composable', 'Preview']
+    excludes: ['**/commonTest/**', '**/androidUnitTest/**', '**/iosTest/**', '**/theme/**']
+  UnusedPrivateMember:
+    ignoreAnnotated: ['Preview']
+  ReturnCount:
+    max: 3
+  MaxLineLength:
+    maxLineLength: 120
+    excludeCommentStatements: true
+  ForbiddenComment:
+    active: false
+  WildcardImport:
+    active: true
+
+exceptions:
+  SwallowedException:
+    active: false
