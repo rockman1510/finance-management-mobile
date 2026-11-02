@@ -14,12 +14,14 @@ plugins {
     alias(libs.plugins.detekt) apply false
 }
 
+val ktlintCliVersion: String = libs.versions.ktlint.cli.get()
+
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
     extensions.configure<KtlintExtension> {
-        version.set(libs.versions.ktlint.cli.get())
+        version.set(ktlintCliVersion)
         filter {
             exclude { it.file.path.contains("${File.separator}build${File.separator}") }
         }
