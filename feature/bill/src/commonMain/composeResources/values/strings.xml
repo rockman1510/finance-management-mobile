@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bills">Hóa đơn</string>
+    <string name="add_bill">Thêm hóa đơn</string>
+    <string name="edit_bill">Sửa hóa đơn</string>
+    <string name="no_bills">Chưa có hóa đơn định kỳ</string>
+    <string name="no_bills_message">Thêm điện, nước, internet… để được nhắc trước hạn.</string>
+    <string name="group_overdue">Quá hạn</string>
+    <string name="group_due_soon">Sắp đến hạn</string>
+    <string name="group_later">Sau này</string>
+    <string name="group_paused">Tạm dừng</string>
+    <string name="days_left">Còn %1$d ngày</string>
+    <string name="days_overdue">Quá hạn %1$d ngày</string>
+    <string name="due_today">Đến hạn hôm nay</string>
+    <string name="pay">Thanh toán</string>
+    <string name="pay_now">Thanh toán ngay</string>
+    <string name="skip_period">Bỏ qua kỳ này</string>
+    <string name="pause">Tạm dừng</string>
+    <string name="resume">Tiếp tục</string>
+    <string name="next_due">Hạn tiếp theo</string>
+    <string name="history">Lịch sử thanh toán</string>
+    <string name="status_PENDING">Đang xử lý</string>
+    <string name="status_RECORDED">Đã ghi nhận</string>
+    <string name="status_FAILED">Thất bại</string>
+    <string name="status_SKIPPED">Bỏ qua</string>
+    <string name="template">Mẫu nhanh</string>
+    <string name="template_electricity">Điện</string>
+    <string name="template_water">Nước</string>
+    <string name="template_internet">Internet</string>
+    <string name="template_phone">Điện thoại</string>
+    <string name="template_rent">Tiền nhà</string>
+    <string name="frequency">Tần suất</string>
+    <string name="freq_WEEKLY">Hằng tuần</string>
+    <string name="freq_MONTHLY">Hằng tháng</string>
+    <string name="freq_QUARTERLY">Hằng quý</string>
+    <string name="freq_YEARLY">Hằng năm</string>
+    <string name="interval">Mỗi N kỳ</string>
+    <string name="first_due_date">Ngày đến hạn đầu tiên</string>
+    <string name="end_date">Ngày kết thúc (không bắt buộc)</string>
+    <string name="remind_days">Nhắc trước (ngày)</string>
+    <string name="delete_bill">Xóa hóa đơn</string>
+    <string name="error_bill_finished">Hóa đơn đã kết thúc.</string>
+    <string name="error_choose_category">Hãy chọn danh mục chi tiêu</string>
+    <string name="error_choose_wallet">Hãy chọn ví</string>
+</resources>

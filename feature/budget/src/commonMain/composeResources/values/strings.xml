@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="budgets">Ngân sách</string>
+    <string name="add_budget">Thêm ngân sách</string>
+    <string name="edit_budget">Sửa ngân sách</string>
+    <string name="no_budgets">Chưa có ngân sách</string>
+    <string name="no_budgets_message">Đặt giới hạn chi tiêu để luôn trong tầm kiểm soát.</string>
+    <string name="spent_of">%1$s / %2$s</string>
+    <string name="per_day_left">Còn %1$s/ngày trong %2$d ngày</string>
+    <string name="remaining">Còn lại %1$s</string>
+    <string name="over_by">Vượt %1$s</string>
+    <string name="unconverted">Chưa quy đổi được: %1$s</string>
+    <string name="period">Chu kỳ</string>
+    <string name="period_WEEKLY">Tuần</string>
+    <string name="period_MONTHLY">Tháng</string>
+    <string name="period_QUARTERLY">Quý</string>
+    <string name="period_YEARLY">Năm</string>
+    <string name="period_CUSTOM">Tùy chọn</string>
+    <string name="repeat">Lặp lại mỗi kỳ</string>
+    <string name="categories">Danh mục (bỏ trống = tất cả khoản chi)</string>
+    <string name="all_expenses">Tất cả khoản chi</string>
+    <string name="start_date">Ngày bắt đầu</string>
+    <string name="end_date">Ngày kết thúc</string>
+    <string name="state_NOT_STARTED">Chưa bắt đầu</string>
+    <string name="state_ON_TRACK">Trong giới hạn</string>
+    <string name="state_WARNING">Sắp vượt</string>
+    <string name="state_EXCEEDED">Đã vượt</string>
+    <string name="state_ENDED">Đã kết thúc</string>
+    <string name="daily_spending">Chi tiêu theo ngày</string>
+    <string name="previous_period">Kỳ trước</string>
+    <string name="next_period">Kỳ sau</string>
+    <string name="budget_transactions">Giao dịch trong kỳ</string>
+    <string name="delete_budget">Xóa ngân sách</string>
+    <string name="error_period_required">Hãy chọn ngày bắt đầu và kết thúc</string>
+    <string name="error_end_date">Ngày kết thúc phải sau ngày bắt đầu</string>
+</resources>

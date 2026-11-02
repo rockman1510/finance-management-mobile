@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="savings">Tiết kiệm</string>
+    <string name="add_goal">Thêm mục tiêu</string>
+    <string name="edit_goal">Sửa mục tiêu</string>
+    <string name="no_goals">Chưa có mục tiêu tiết kiệm</string>
+    <string name="no_goals_message">Đặt mục tiêu như du lịch, mua xe… và để dành dần.</string>
+    <string name="saved_of">%1$s / %2$s</string>
+    <string name="save_per_month">Cần để dành %1$s/tháng</string>
+    <string name="deadline">Hạn chót</string>
+    <string name="clear_deadline">Bỏ hạn chót</string>
+    <string name="target">Số tiền mục tiêu</string>
+    <string name="reached">Đã đạt mục tiêu 🎉</string>
+    <string name="milestone_half">Bạn đã đi được nửa chặng đường!</string>
+    <string name="deposit">Gửi vào</string>
+    <string name="withdraw">Rút ra</string>
+    <string name="history">Lịch sử</string>
+    <string name="source_MANUAL">Thủ công</string>
+    <string name="source_AUTO">Tự động</string>
+    <string name="source_ROUND_UP">Làm tròn</string>
+    <string name="label_auto">Tự động</string>
+    <string name="label_round_up">Làm tròn</string>
+    <string name="auto_contribution">Tự động gửi tiết kiệm</string>
+    <string name="auto_next">Lần tới: %1$s</string>
+    <string name="frequency">Tần suất</string>
+    <string name="freq_WEEKLY">Hằng tuần</string>
+    <string name="freq_MONTHLY">Hằng tháng</string>
+    <string name="start_date">Ngày bắt đầu</string>
+    <string name="turn_on">Bật</string>
+    <string name="turn_off">Tắt</string>
+    <string name="round_up">Làm tròn chi tiêu</string>
+    <string name="round_up_unit">Làm tròn lên bội số của</string>
+    <string name="round_up_example">Chi 47.000 ₫ → tiết kiệm 3.000 ₫ (bội số 10.000 ₫)</string>
+    <string name="delete_goal">Xóa mục tiêu</string>
+    <string name="error_insufficient">Số tiền rút lớn hơn số đã tiết kiệm.</string>
+    <string name="error_not_empty">Hãy rút hết tiền trước khi xóa mục tiêu.</string>
+    <string name="error_round_up_taken">Ví này đã dùng làm tròn cho mục tiêu khác.</string>
+    <string name="error_currency_mismatch">Ví phải cùng loại tiền với mục tiêu.</string>
+</resources>

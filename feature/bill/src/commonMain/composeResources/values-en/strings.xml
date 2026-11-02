@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="bills">Bills</string>
+    <string name="add_bill">Add bill</string>
+    <string name="edit_bill">Edit bill</string>
+    <string name="no_bills">No recurring bills yet</string>
+    <string name="no_bills_message">Add electricity, water, internet… to get reminders.</string>
+    <string name="group_overdue">Overdue</string>
+    <string name="group_due_soon">Due soon</string>
+    <string name="group_later">Later</string>
+    <string name="group_paused">Paused</string>
+    <string name="days_left">%1$d days left</string>
+    <string name="days_overdue">%1$d days overdue</string>
+    <string name="due_today">Due today</string>
+    <string name="pay">Pay</string>
+    <string name="pay_now">Pay now</string>
+    <string name="skip_period">Skip this period</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="next_due">Next due date</string>
+    <string name="history">Payment history</string>
+    <string name="status_PENDING">Processing</string>
+    <string name="status_RECORDED">Recorded</string>
+    <string name="status_FAILED">Failed</string>
+    <string name="status_SKIPPED">Skipped</string>
+    <string name="template">Quick template</string>
+    <string name="template_electricity">Electricity</string>
+    <string name="template_water">Water</string>
+    <string name="template_internet">Internet</string>
+    <string name="template_phone">Phone</string>
+    <string name="template_rent">Rent</string>
+    <string name="frequency">Frequency</string>
+    <string name="freq_WEEKLY">Weekly</string>
+    <string name="freq_MONTHLY">Monthly</string>
+    <string name="freq_QUARTERLY">Quarterly</string>
+    <string name="freq_YEARLY">Yearly</string>
+    <string name="interval">Every N periods</string>
+    <string name="first_due_date">First due date</string>
+    <string name="end_date">End date (optional)</string>
+    <string name="remind_days">Remind days before</string>
+    <string name="delete_bill">Delete bill</string>
+    <string name="error_bill_finished">This bill has ended.</string>
+    <string name="error_choose_category">Choose an expense category</string>
+    <string name="error_choose_wallet">Choose a wallet</string>
+</resources>

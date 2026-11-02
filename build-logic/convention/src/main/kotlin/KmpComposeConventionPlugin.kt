@@ -14,13 +14,19 @@ class KmpComposeConventionPlugin : Plugin<Project> {
             pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 
             extensions.configure<KotlinMultiplatformExtension> {
+                compilerOptions {
+                    optIn.addAll(
+                        "androidx.compose.material3.ExperimentalMaterial3Api",
+                        "androidx.compose.foundation.layout.ExperimentalLayoutApi",
+                        "org.jetbrains.compose.resources.ExperimentalResourceApi",
+                    )
+                }
                 sourceSets.getByName("commonMain").dependencies {
                     implementation(libs.library("compose-runtime"))
                     implementation(libs.library("compose-foundation"))
                     implementation(libs.library("compose-material3"))
                     implementation(libs.library("compose-material-icons-extended"))
                     implementation(libs.library("compose-ui"))
-                    implementation(libs.library("compose-ui-tooling-preview"))
                     implementation(libs.library("compose-components-resources"))
                 }
             }

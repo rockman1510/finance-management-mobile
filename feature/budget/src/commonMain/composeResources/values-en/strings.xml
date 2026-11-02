@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="budgets">Budgets</string>
+    <string name="add_budget">Add budget</string>
+    <string name="edit_budget">Edit budget</string>
+    <string name="no_budgets">No budgets yet</string>
+    <string name="no_budgets_message">Set spending limits to stay in control.</string>
+    <string name="spent_of">%1$s of %2$s</string>
+    <string name="per_day_left">%1$s/day left for %2$d days</string>
+    <string name="remaining">%1$s left</string>
+    <string name="over_by">Over by %1$s</string>
+    <string name="unconverted">Not converted: %1$s</string>
+    <string name="period">Period</string>
+    <string name="period_WEEKLY">Week</string>
+    <string name="period_MONTHLY">Month</string>
+    <string name="period_QUARTERLY">Quarter</string>
+    <string name="period_YEARLY">Year</string>
+    <string name="period_CUSTOM">Custom</string>
+    <string name="repeat">Repeat every period</string>
+    <string name="categories">Categories (empty = all expenses)</string>
+    <string name="all_expenses">All expenses</string>
+    <string name="start_date">Start date</string>
+    <string name="end_date">End date</string>
+    <string name="state_NOT_STARTED">Not started</string>
+    <string name="state_ON_TRACK">On track</string>
+    <string name="state_WARNING">Close to the limit</string>
+    <string name="state_EXCEEDED">Exceeded</string>
+    <string name="state_ENDED">Ended</string>
+    <string name="daily_spending">Daily spending</string>
+    <string name="previous_period">Previous period</string>
+    <string name="next_period">Next period</string>
+    <string name="budget_transactions">Transactions in this period</string>
+    <string name="delete_budget">Delete budget</string>
+    <string name="error_period_required">Choose a start and an end date</string>
+    <string name="error_end_date">The end date must be after the start date</string>
+</resources>

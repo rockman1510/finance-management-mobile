@@ -24,6 +24,11 @@ kotlin {
 
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
+        optIn.addAll(
+            "androidx.compose.material3.ExperimentalMaterial3Api",
+            "androidx.compose.foundation.layout.ExperimentalLayoutApi",
+            "org.jetbrains.compose.resources.ExperimentalResourceApi",
+        )
     }
 
     sourceSets {
@@ -40,13 +45,15 @@ kotlin {
             implementation(projects.feature.category)
             implementation(projects.feature.transaction)
             implementation(projects.feature.currency)
+            implementation(projects.feature.budget)
+            implementation(projects.feature.bill)
+            implementation(projects.feature.saving)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.ui)
-            implementation(libs.compose.ui.tooling.preview)
             implementation(libs.compose.components.resources)
 
             implementation(libs.androidx.lifecycle.viewmodel)
