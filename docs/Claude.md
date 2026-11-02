@@ -6,9 +6,9 @@ written with Kotlin Multiplatform + Compose Multiplatform, connected to an exist
 
 DOCUMENTS (read them fully before starting, look things up again whenever needed, never guess the API):
 - KMP_APP_WORKFLOW.en.md – Part C is the BLUEPRINT of every feature (C0 shared foundation, F01–F22).
-- MOBILE_API_GUIDE.en.md – how to use the API, business rules, error codes, sample JSON ("API §n" =
+- docs/MOBILE_API_GUIDE.en.md – how to use the API, business rules, error codes, sample JSON ("API §n" =
   section n).
-- openapi.json – the exact request/response types.
+- docs/api/openapi.json – the exact request/response types.
 
 The app's UI language are both English and Vietnamese: every user-facing string from the blueprint goes into resources in Vietnamese
 (with an English translation prepared).
