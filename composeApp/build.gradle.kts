@@ -36,6 +36,8 @@ kotlin {
             implementation(projects.feature.auth)
             implementation(projects.feature.onboarding)
             implementation(projects.feature.settings)
+            implementation(projects.feature.wallet)
+            implementation(projects.feature.category)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)

@@ -34,3 +34,19 @@ fun String.toBigDecimalOrNull(): BigDecimal? {
 }
 
 private val DECIMAL_PATTERN = Regex("^-?\\d+(\\.\\d+)?$")
+
+private val HUNDRED = BigDecimal.fromInt(100)
+private val DIVISION_MODE =
+    com.ionspin.kotlin.bignum.decimal
+        .DecimalMode(20, RoundingMode.ROUND_HALF_AWAY_FROM_ZERO)
+
+/** Safe division (never throws on non-terminating results such as 1/3). Division by zero returns zero. */
+fun BigDecimal.safeDivide(divisor: BigDecimal): BigDecimal =
+    if (divisor.isZero()) BigDecimal.ZERO else divide(divisor, DIVISION_MODE)
+
+/** `this` as a whole percentage of [total] (0 when total is zero). */
+fun BigDecimal.percentOf(total: BigDecimal): Int =
+    (this * HUNDRED).safeDivide(total).roundToFractionDigits(0).intValue(false)
+
+/** Approximate value for drawing charts only – never for money arithmetic. */
+fun BigDecimal.toChartValue(): Float = toStringExpanded().toFloatOrNull() ?: 0f

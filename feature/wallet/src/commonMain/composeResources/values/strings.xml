@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wallets_title">Ví</string>
+    <string name="wallets_total">Tổng số dư</string>
+    <string name="missing_rates">Chưa có tỷ giá cho: %1$s</string>
+    <string name="archived_section">Đã lưu trữ (%1$d)</string>
+    <string name="add_wallet">Thêm ví</string>
+    <string name="edit_wallet">Sửa ví</string>
+    <string name="wallet_type">Loại ví</string>
+    <string name="initial_balance">Số dư ban đầu</string>
+    <string name="excluded_from_total">Không tính vào tổng</string>
+    <string name="credit_limit">Hạn mức tín dụng</string>
+    <string name="statement_day">Ngày sao kê (1–31)</string>
+    <string name="payment_due_day">Ngày đến hạn thanh toán (1–31)</string>
+    <string name="used_of_limit">Đã dùng %1$s / %2$s</string>
+    <string name="available_credit">Còn lại %1$s</string>
+    <string name="due_on_day">Hạn thanh toán ngày %1$d</string>
+    <string name="balance">Số dư</string>
+    <string name="adjust_balance">Điều chỉnh số dư</string>
+    <string name="new_balance">Số dư mới</string>
+    <string name="adjust_hint">Tạo giao dịch điều chỉnh để số dư bằng số mới (không tính là thu/chi).</string>
+    <string name="archive">Lưu trữ</string>
+    <string name="unarchive">Bỏ lưu trữ</string>
+    <string name="delete_wallet">Xóa ví</string>
+    <string name="view_transactions">Xem giao dịch</string>
+    <string name="archived_label">Đã lưu trữ</string>
+    <string name="excluded_label">Không tính vào tổng</string>
+    <string name="no_wallets_message">Thêm ví đầu tiên để bắt đầu ghi chép.</string>
+    <string name="error_has_transactions">Ví đã có giao dịch nên không thể xóa. Bạn có thể lưu trữ ví.</string>
+    <string name="error_nothing_to_adjust">Số dư đã đúng, không cần điều chỉnh.</string>
+    <string name="error_day">Nhập một ngày từ 1 đến 31</string>
+    <string name="error_credit_limit">Hạn mức không hợp lệ</string>
+</resources>

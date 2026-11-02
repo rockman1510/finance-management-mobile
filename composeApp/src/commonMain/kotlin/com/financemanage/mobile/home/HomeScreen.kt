@@ -38,7 +38,7 @@ fun HomeScreen(onOpenSettings: () -> Unit) {
                             contentDescription = stringResource(Res.string.home_notifications),
                         )
                     }
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = onOpenSettings) {
                         Icon(
                             Icons.Outlined.AccountCircle,
                             contentDescription = stringResource(Res.string.home_settings),

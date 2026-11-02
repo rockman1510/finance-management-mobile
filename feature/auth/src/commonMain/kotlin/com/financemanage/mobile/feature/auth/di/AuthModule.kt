@@ -19,6 +19,6 @@ val authModule =
         single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
         viewModel { SignInViewModel(get()) }
         viewModel { SignUpViewModel(get()) }
-        viewModel { params -> TwoFactorViewModel(get(), params.get(), params.get()) }
+        viewModel { params -> TwoFactorViewModel(get(), params.get<String>(0), params.get<Long>(1)) }
         viewModel { ForgotPasswordViewModel(get()) }
     }

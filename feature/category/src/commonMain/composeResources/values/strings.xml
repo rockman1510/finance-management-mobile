@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="categories_title">Danh mục</string>
+    <string name="expense">Chi tiêu</string>
+    <string name="income">Thu nhập</string>
+    <string name="add_category">Thêm danh mục</string>
+    <string name="add_subcategory">Thêm danh mục con</string>
+    <string name="edit_category">Sửa danh mục</string>
+    <string name="category_type">Loại</string>
+    <string name="parent_category">Danh mục cha</string>
+    <string name="no_parent">Không (danh mục chính)</string>
+    <string name="icon">Biểu tượng</string>
+    <string name="delete_category">Xóa danh mục</string>
+    <string name="error_in_use">Danh mục đang được dùng nên không thể xóa.</string>
+    <string name="error_has_children">Hãy xóa các danh mục con trước.</string>
+    <string name="error_too_deep">Chỉ có tối đa 2 cấp danh mục.</string>
+    <string name="error_type_mismatch">Danh mục con phải cùng loại với danh mục cha.</string>
+</resources>

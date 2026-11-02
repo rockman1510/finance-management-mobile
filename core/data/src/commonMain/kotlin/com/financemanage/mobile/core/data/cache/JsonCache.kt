@@ -88,7 +88,10 @@ class JsonCache(
 
     private fun <T> JsonCacheEntity.decode(serializer: KSerializer<T>): Cached<T>? =
         try {
-            Cached(json.decodeFromString(serializer, this.json), Instant.fromEpochMilliseconds(updatedAtEpochMillis))
+            Cached(
+                this@JsonCache.json.decodeFromString(serializer, this.json),
+                Instant.fromEpochMilliseconds(updatedAtEpochMillis),
+            )
         } catch (e: SerializationException) {
             null
         } catch (e: IllegalArgumentException) {

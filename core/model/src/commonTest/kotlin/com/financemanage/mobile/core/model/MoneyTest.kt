@@ -48,4 +48,11 @@ class MoneyTest {
         assertNull("1e5".toBigDecimalOrNull())
         assertNull("abc".toBigDecimalOrNull())
     }
+
+    @Test
+    fun percentagesNeverThrow() {
+        assertEquals(33, "1".toBigDecimalOrNull()!!.percentOf("3".toBigDecimalOrNull()!!))
+        assertEquals(0, "5".toBigDecimalOrNull()!!.percentOf("0".toBigDecimalOrNull()!!))
+        assertEquals(150, "45".toBigDecimalOrNull()!!.percentOf("30".toBigDecimalOrNull()!!))
+    }
 }

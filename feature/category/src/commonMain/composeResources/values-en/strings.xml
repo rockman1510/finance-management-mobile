@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="categories_title">Categories</string>
+    <string name="expense">Expense</string>
+    <string name="income">Income</string>
+    <string name="add_category">Add category</string>
+    <string name="add_subcategory">Add sub-category</string>
+    <string name="edit_category">Edit category</string>
+    <string name="category_type">Type</string>
+    <string name="parent_category">Parent category</string>
+    <string name="no_parent">None (top level)</string>
+    <string name="icon">Icon</string>
+    <string name="delete_category">Delete category</string>
+    <string name="error_in_use">This category is in use and cannot be deleted.</string>
+    <string name="error_has_children">Delete its sub-categories first.</string>
+    <string name="error_too_deep">Categories can only have 2 levels.</string>
+    <string name="error_type_mismatch">A sub-category must have its parent type.</string>
+</resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wallets_title">Wallets</string>
+    <string name="wallets_total">Total balance</string>
+    <string name="missing_rates">No exchange rate for: %1$s</string>
+    <string name="archived_section">Archived (%1$d)</string>
+    <string name="add_wallet">Add wallet</string>
+    <string name="edit_wallet">Edit wallet</string>
+    <string name="wallet_type">Wallet type</string>
+    <string name="initial_balance">Initial balance</string>
+    <string name="excluded_from_total">Exclude from total</string>
+    <string name="credit_limit">Credit limit</string>
+    <string name="statement_day">Statement day (1–31)</string>
+    <string name="payment_due_day">Payment due day (1–31)</string>
+    <string name="used_of_limit">Used %1$s of %2$s</string>
+    <string name="available_credit">Available %1$s</string>
+    <string name="due_on_day">Due on day %1$d</string>
+    <string name="balance">Balance</string>
+    <string name="adjust_balance">Adjust balance</string>
+    <string name="new_balance">New balance</string>
+    <string name="adjust_hint">Creates an adjustment so the balance matches (not counted as income/expense).</string>
+    <string name="archive">Archive</string>
+    <string name="unarchive">Unarchive</string>
+    <string name="delete_wallet">Delete wallet</string>
+    <string name="view_transactions">View transactions</string>
+    <string name="archived_label">Archived</string>
+    <string name="excluded_label">Excluded</string>
+    <string name="no_wallets_message">Add your first wallet to start tracking.</string>
+    <string name="error_has_transactions">This wallet has transactions and cannot be deleted. You can archive it instead.</string>
+    <string name="error_nothing_to_adjust">The balance is already correct.</string>
+    <string name="error_day">Enter a day from 1 to 31</string>
+    <string name="error_credit_limit">Invalid credit limit</string>
+</resources>

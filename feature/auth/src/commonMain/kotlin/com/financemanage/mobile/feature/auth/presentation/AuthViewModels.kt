@@ -179,7 +179,8 @@ class TwoFactorViewModel(
 
     fun verify() {
         val current = mutableState.value
-        if (current.code.isBlank() || current.loading || current.expired || verifyJob?.isActive == true) return
+        val busy = current.loading || verifyJob?.isActive == true
+        if (current.code.isBlank() || current.expired || busy) return
         mutableState.update { it.copy(loading = true, error = null) }
         verifyJob =
             viewModelScope.launch {
