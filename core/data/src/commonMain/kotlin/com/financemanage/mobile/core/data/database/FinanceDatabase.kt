@@ -10,6 +10,10 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import androidx.room.Upsert
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.financemanage.mobile.core.data.cache.JsonCacheDao
+import com.financemanage.mobile.core.data.cache.JsonCacheEntity
+import com.financemanage.mobile.core.data.outbox.OutboxDao
+import com.financemanage.mobile.core.data.outbox.OutboxEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -19,13 +23,17 @@ import kotlinx.coroutines.flow.Flow
  * and DAOs here; bump [version] when the schema changes (it is a cache: destructive migration is acceptable).
  */
 @Database(
-    entities = [SyncMetadataEntity::class],
-    version = 1,
+    entities = [SyncMetadataEntity::class, JsonCacheEntity::class, OutboxEntity::class],
+    version = 2,
     exportSchema = true,
 )
 @ConstructedBy(FinanceDatabaseConstructor::class)
 abstract class FinanceDatabase : RoomDatabase() {
     abstract fun syncMetadataDao(): SyncMetadataDao
+
+    abstract fun jsonCacheDao(): JsonCacheDao
+
+    abstract fun outboxDao(): OutboxDao
 }
 
 // Room generates the `actual` implementations for every target.

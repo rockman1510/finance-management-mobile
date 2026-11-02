@@ -69,3 +69,17 @@ private fun AppError.Api.statusResource(): StringResource =
         isTooManyRequests -> Res.string.error_too_many_requests_generic
         else -> Res.string.error_generic
     }
+
+/**
+ * Like [userMessage] but checks the feature's own `code` → string table first.
+ * `error.userMessage(mapOf(ErrorCodes.EMAIL_TAKEN to Res.string.error_email_taken))`
+ */
+@Composable
+fun AppError.userMessage(overrides: Map<String, StringResource>): String {
+    val code = (this as? AppError.Api)?.code
+    val resource = code?.let { overrides[it] }
+    return if (resource != null) stringResource(resource) else userMessage()
+}
+
+/** Backend validation message for one input (`fieldErrors`, API §3). */
+fun AppError?.fieldError(field: String): String? = (this as? AppError.Api)?.fieldErrors?.get(field)
