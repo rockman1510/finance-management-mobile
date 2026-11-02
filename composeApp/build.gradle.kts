@@ -48,6 +48,7 @@ kotlin {
             implementation(projects.feature.budget)
             implementation(projects.feature.bill)
             implementation(projects.feature.saving)
+            implementation(projects.feature.home)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)

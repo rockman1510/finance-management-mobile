@@ -276,13 +276,13 @@ class BillFormViewModel(
 
     fun onFrequency(value: Frequency) = edit { it.copy(frequency = value) }
 
-    fun onInterval(value: String) = edit { it.copy(interval = value.filter(Char::isDigit).take(3)) }
+    fun onInterval(value: String) = edit { it.copy(interval = value.filter(Char::isDigit).take(MAX_INTERVAL_DIGITS)) }
 
     fun onFirstDue(value: LocalDate) = edit { it.copy(firstDueDate = value) }
 
     fun onEnd(value: LocalDate) = edit { it.copy(endDate = value) }
 
-    fun onRemind(value: String) = edit { it.copy(remindDays = value.filter(Char::isDigit).take(2)) }
+    fun onRemind(value: String) = edit { it.copy(remindDays = value.filter(Char::isDigit).take(MAX_REMIND_DIGITS)) }
 
     fun onNote(value: String) = edit { it.copy(note = value) }
 
@@ -291,41 +291,59 @@ class BillFormViewModel(
             transform(it).copy(problems = emptySet(), error = null)
         }
 
-    fun save() {
-        val form = mutableState.value
-        val amount = form.wallet?.let { parseAmountInput(form.amount, it.currency.fractionDigits) }
+    /** Validated values ready to send, or the problems found. */
+    private data class ValidBill(
+        val amount: com.ionspin.kotlin.bignum.decimal.BigDecimal,
+        val walletId: String,
+        val categoryId: String,
+        val firstDue: LocalDate,
+    )
+
+    private fun validate(form: BillFormUiState): ValidBill? {
+        val amount =
+            form.wallet?.let { parseAmountInput(form.amount, it.currency.fractionDigits) }?.takeIf {
+                it.signum() >
+                    0
+            }
         val problems =
             buildSet {
                 if (form.name.isBlank()) add(BillProblem.NAME)
-                if (amount == null || amount.signum() <= 0) add(BillProblem.AMOUNT)
+                if (amount == null) add(BillProblem.AMOUNT)
                 if (form.walletId == null) add(BillProblem.WALLET)
                 if (form.categoryId == null) add(BillProblem.CATEGORY)
                 if (form.firstDueDate == null) add(BillProblem.DATE)
             }
-        val walletId = form.walletId
-        val categoryId = form.categoryId
-        val firstDue = form.firstDueDate
-        if (problems.isNotEmpty() || amount == null || walletId == null || categoryId == null || firstDue == null) {
-            mutableState.update { it.copy(problems = problems) }
-            return
-        }
+        mutableState.update { it.copy(problems = problems) }
+        if (problems.isNotEmpty()) return null
+        return ValidBill(
+            requireNotNull(amount),
+            requireNotNull(form.walletId),
+            requireNotNull(form.categoryId),
+            requireNotNull(form.firstDueDate),
+        )
+    }
+
+    fun save() {
+        val form = mutableState.value
+        val valid = validate(form) ?: return
         mutableState.update { it.copy(saving = true) }
         viewModelScope.launch {
             val remind = form.remindDays.toIntOrNull()
+            val note = form.note.trim()
             val result =
                 if (id == null) {
                     repository.create(
                         CreateBillRequest(
-                            form.name.trim(),
-                            amount,
-                            walletId,
-                            categoryId,
-                            form.frequency,
-                            form.interval.toIntOrNull()?.coerceAtLeast(1),
-                            firstDue,
-                            form.endDate,
-                            remind,
-                            form.note.trim().ifEmpty { null },
+                            name = form.name.trim(),
+                            amount = valid.amount,
+                            walletId = valid.walletId,
+                            categoryId = valid.categoryId,
+                            frequency = form.frequency,
+                            interval = form.interval.toIntOrNull()?.coerceAtLeast(1),
+                            firstDueDate = valid.firstDue,
+                            endDate = form.endDate,
+                            remindDaysBefore = remind,
+                            note = note.ifEmpty { null },
                         ),
                     )
                 } else {
@@ -333,12 +351,12 @@ class BillFormViewModel(
                         id,
                         UpdateBillRequest(
                             form.name.trim(),
-                            amount,
-                            walletId,
-                            categoryId,
+                            valid.amount,
+                            valid.walletId,
+                            valid.categoryId,
                             form.endDate,
                             remind,
-                            form.note.trim(),
+                            note,
                         ),
                     )
                 }
@@ -352,3 +370,6 @@ class BillFormViewModel(
         }
     }
 }
+
+private const val MAX_INTERVAL_DIGITS = 3
+private const val MAX_REMIND_DIGITS = 2

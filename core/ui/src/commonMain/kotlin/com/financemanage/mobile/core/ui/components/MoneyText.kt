@@ -43,7 +43,7 @@ fun MoneyText(
         text = MoneyFormatter.format(money, hidden = hidden, showPlusSign = showPlusSign),
         modifier = if (hidden) modifier.semantics { contentDescription = hiddenDescription } else modifier,
         style = style,
-        color = color,
+        color = textColor,
         maxLines = 1,
     )
 }

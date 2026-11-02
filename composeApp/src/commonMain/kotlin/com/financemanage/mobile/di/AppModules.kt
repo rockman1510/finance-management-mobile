@@ -13,6 +13,7 @@ import com.financemanage.mobile.feature.bill.di.billModule
 import com.financemanage.mobile.feature.budget.di.budgetModule
 import com.financemanage.mobile.feature.category.di.categoryModule
 import com.financemanage.mobile.feature.currency.di.currencyModule
+import com.financemanage.mobile.feature.home.di.homeModule
 import com.financemanage.mobile.feature.onboarding.di.onboardingModule
 import com.financemanage.mobile.feature.saving.di.savingModule
 import com.financemanage.mobile.feature.settings.di.settingsModule
@@ -48,6 +49,7 @@ fun appModules(config: ApiConfig): List<Module> =
         budgetModule,
         billModule,
         savingModule,
+        homeModule,
     )
 
 fun initKoin(
