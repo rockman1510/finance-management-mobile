@@ -9,9 +9,11 @@ import com.financemanage.mobile.core.network.ApiConfig
 import com.financemanage.mobile.core.network.di.networkModule
 import com.financemanage.mobile.feature.auth.di.AuthConfig
 import com.financemanage.mobile.feature.auth.di.authModule
-import com.financemanage.mobile.feature.onboarding.di.onboardingModule
 import com.financemanage.mobile.feature.category.di.categoryModule
+import com.financemanage.mobile.feature.currency.di.currencyModule
+import com.financemanage.mobile.feature.onboarding.di.onboardingModule
 import com.financemanage.mobile.feature.settings.di.settingsModule
+import com.financemanage.mobile.feature.transaction.di.transactionModule
 import com.financemanage.mobile.feature.wallet.di.walletModule
 import com.financemanage.mobile.platformGoogleWebClientId
 import org.koin.core.context.startKoin
@@ -38,6 +40,8 @@ fun appModules(config: ApiConfig): List<Module> =
         settingsModule,
         walletModule,
         categoryModule,
+        transactionModule,
+        currencyModule,
     )
 
 fun initKoin(

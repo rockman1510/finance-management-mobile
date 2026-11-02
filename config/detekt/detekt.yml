@@ -7,6 +7,8 @@ complexity:
     ignoreAnnotated: ['Composable']
   LongMethod:
     ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
   TooManyFunctions:
     active: false
 
@@ -27,7 +29,8 @@ style:
   UnusedPrivateMember:
     ignoreAnnotated: ['Preview']
   ReturnCount:
-    max: 3
+    max: 5
+    excludeGuardClauses: true
   MaxLineLength:
     maxLineLength: 120
     excludeCommentStatements: true

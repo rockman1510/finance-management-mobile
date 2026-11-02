@@ -42,6 +42,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object CurrencyConverterRoute
 
+/** Add an exchange rate, optionally pre-filled with the missing pair (F11). */
+@Serializable data class AddRateRoute(
+    val base: String? = null,
+    val quote: String? = null,
+)
+
 @Serializable data object OutboxRoute
 
 // --- Wallets (F05)

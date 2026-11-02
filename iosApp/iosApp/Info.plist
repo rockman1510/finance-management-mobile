@@ -4,6 +4,12 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Chụp ảnh hóa đơn để đính kèm vào giao dịch.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Chọn ảnh hóa đơn để đính kèm vào giao dịch.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Dùng Face ID để mở khóa ứng dụng.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Allows http://localhost:8080 for the local backend; production uses HTTPS only. -->

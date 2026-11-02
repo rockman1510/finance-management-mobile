@@ -48,21 +48,22 @@ fun <T> ResourceContent(
     content: @Composable (T) -> Unit,
 ) {
     val data = resource.data
+    val error = resource.error
     PullToRefreshBox(
         isRefreshing = resource.loading && data != null,
         onRefresh = onRefresh,
         modifier = modifier.fillMaxSize(),
     ) {
         when {
-            data == null && resource.error != null -> ErrorState(resource.error.userMessage(), onRetry = onRefresh)
+            data == null && error != null -> ErrorState(error.userMessage(), onRetry = onRefresh)
             data == null -> loading()
             isEmpty(data) -> Box(Modifier.fillMaxSize()) { empty() }
             else ->
                 Column(Modifier.fillMaxSize()) {
-                    if (resource.error != null) {
+                    if (error != null) {
                         Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
                             Text(
-                                text = resource.error.userMessage(),
+                                text = error.userMessage(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),

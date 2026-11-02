@@ -38,6 +38,8 @@ kotlin {
             implementation(projects.feature.settings)
             implementation(projects.feature.wallet)
             implementation(projects.feature.category)
+            implementation(projects.feature.transaction)
+            implementation(projects.feature.currency)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)

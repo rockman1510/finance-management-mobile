@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rates_title">Exchange rates</string>
+    <string name="converter_title">Currency converter</string>
+    <string name="add_rate">Add exchange rate</string>
+    <string name="no_rates">No exchange rates yet</string>
+    <string name="no_rates_message">Add rates to convert reports and transfers between currencies.</string>
+    <string name="global">Global</string>
+    <string name="base">From</string>
+    <string name="quote">To</string>
+    <string name="rate">Rate</string>
+    <string name="rate_example">1 %1$s = ? %2$s</string>
+    <string name="effective_date">Effective date</string>
+    <string name="delete_rate">Delete rate</string>
+    <string name="convert">Convert</string>
+    <string name="result">%1$s = %2$s</string>
+    <string name="used_rate">Rate %1$s (%2$s)</string>
+    <string name="error_rate_missing">No exchange rate for this pair.</string>
+    <string name="error_same_currency">The currencies must differ.</string>
+    <string name="error_invalid_rate">Invalid rate.</string>
+</resources>

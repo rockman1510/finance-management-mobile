@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rates_title">Tỷ giá</string>
+    <string name="converter_title">Quy đổi tiền tệ</string>
+    <string name="add_rate">Thêm tỷ giá</string>
+    <string name="no_rates">Chưa có tỷ giá nào</string>
+    <string name="no_rates_message">Thêm tỷ giá để quy đổi báo cáo và chuyển tiền giữa các loại tiền.</string>
+    <string name="global">Toàn cục</string>
+    <string name="base">Từ</string>
+    <string name="quote">Sang</string>
+    <string name="rate">Tỷ giá</string>
+    <string name="rate_example">1 %1$s = ? %2$s</string>
+    <string name="effective_date">Ngày áp dụng</string>
+    <string name="delete_rate">Xóa tỷ giá</string>
+    <string name="convert">Quy đổi</string>
+    <string name="result">%1$s = %2$s</string>
+    <string name="used_rate">Tỷ giá %1$s (ngày %2$s)</string>
+    <string name="error_rate_missing">Chưa có tỷ giá cho cặp tiền này.</string>
+    <string name="error_same_currency">Hai loại tiền phải khác nhau.</string>
+    <string name="error_invalid_rate">Tỷ giá không hợp lệ.</string>
+</resources>
