@@ -23,19 +23,15 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.financemanage.mobile.add.AddSheet
-import com.financemanage.mobile.add.QuickAddPlaceholderScreen
-import com.financemanage.mobile.assets.AssetsScreen
+import com.financemanage.mobile.core.navigation.HomeRoute
+import com.financemanage.mobile.core.navigation.QuickAddRoute
+import com.financemanage.mobile.core.navigation.TransferRoute
 import com.financemanage.mobile.core.ui.components.OfflineBanner
 import com.financemanage.mobile.core.ui.resources.Res
 import com.financemanage.mobile.core.ui.resources.tab_add
-import com.financemanage.mobile.home.HomeScreen
-import com.financemanage.mobile.plan.PlanScreen
-import com.financemanage.mobile.transactions.TransactionsScreen
 import org.jetbrains.compose.resources.stringResource
 
 /** Signed-in shell: offline banner, bottom bar with 5 items and the NavHost. */
@@ -47,7 +43,7 @@ fun MainScaffold(
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
-    val showBottomBar = TopLevelDestination.entries.any { currentDestination.isOn(it) } || currentDestination == null
+    val showBottomBar = currentDestination == null || TopLevelDestination.entries.any { currentDestination.isOn(it) }
 
     Scaffold(
         bottomBar = {
@@ -67,16 +63,7 @@ fun MainScaffold(
                 startDestination = HomeRoute,
                 modifier = Modifier.weight(1f),
             ) {
-                composable<HomeRoute> { HomeScreen() }
-                composable<TransactionsRoute> { TransactionsScreen() }
-                composable<PlanRoute> { PlanScreen() }
-                composable<AssetsRoute> { AssetsScreen() }
-                composable<QuickAddRoute> { entry ->
-                    QuickAddPlaceholderScreen(
-                        kind = entry.toRoute<QuickAddRoute>().kind,
-                        onBack = { navController.popBackStack() },
-                    )
-                }
+                appGraph(navController)
             }
         }
     }
@@ -86,7 +73,7 @@ fun MainScaffold(
             onDismiss = { showAddSheet = false },
             onSelect = { kind ->
                 showAddSheet = false
-                navController.navigate(QuickAddRoute(kind))
+                navController.navigate(if (kind == null) TransferRoute else QuickAddRoute(kind))
             },
         )
     }
@@ -99,14 +86,14 @@ private fun FinanceBottomBar(
     onAdd: () -> Unit,
 ) {
     NavigationBar {
-        TopLevelDestination.entries.forEachIndexed { index, destination ->
-            if (index == TopLevelDestination.PLAN.ordinal) {
+        TopLevelDestination.entries.forEach { destination ->
+            if (destination == TopLevelDestination.PLAN) {
                 NavigationBarItem(
                     selected = false,
                     onClick = onAdd,
                     icon = {
                         Icon(
-                            imageVector = Icons.Filled.AddCircle,
+                            Icons.Filled.AddCircle,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )

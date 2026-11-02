@@ -30,7 +30,9 @@ fun interface SignOutHook {
 }
 
 @Serializable
-private data class LogoutRequest(val refreshToken: String)
+private data class LogoutRequest(
+    val refreshToken: String,
+)
 
 /**
  * Owns the signed-in state of the app. Signing out (by the user, after account deletion, or because the refresh

@@ -1,11 +1,13 @@
 package com.financemanage.mobile
 
+import com.financemanage.mobile.core.data.session.SessionState
 import com.financemanage.mobile.core.data.settings.AppSettingsRepository
 import com.financemanage.mobile.core.data.settings.ThemeMode
 import com.financemanage.mobile.core.testing.FakeNetworkMonitor
 import com.financemanage.mobile.core.testing.InMemoryPreferencesDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -35,7 +37,7 @@ class AppViewModelTest {
         runTest {
             val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
             val network = FakeNetworkMonitor(online = true)
-            val viewModel = AppViewModel(settings, network)
+            val viewModel = AppViewModel(settings, network, MutableStateFlow(SessionState.SIGNED_IN))
             val collector = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
             settings.setThemeMode(ThemeMode.DARK)
@@ -46,6 +48,7 @@ class AppViewModelTest {
             assertEquals(ThemeMode.DARK, state.themeMode)
             assertEquals(true, state.hideBalances)
             assertFalse(state.isOnline)
+            assertEquals(SessionState.SIGNED_IN, state.session)
             collector.cancel()
         }
 }

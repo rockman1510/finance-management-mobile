@@ -93,13 +93,19 @@ class WalletRepository(
             .map(WalletDto::toDomain)
 
     suspend fun delete(id: String): AppResult<Unit> =
-        apiCall { client.delete(api("wallets/$id")); Unit }.onSuccess { refresh() }
+        apiCall {
+            client.delete(api("wallets/$id"))
+            Unit
+        }.onSuccess { refresh() }
 
     suspend fun adjustBalance(
         id: String,
         request: AdjustBalanceRequest,
     ): AppResult<Unit> =
-        apiCall { client.post(api("wallets/$id/adjust-balance")) { json(request) }; Unit }.onSuccess { refresh() }
+        apiCall {
+            client.post(api("wallets/$id/adjust-balance")) { json(request) }
+            Unit
+        }.onSuccess { refresh() }
 
     suspend fun total(currency: CurrencyCode): AppResult<WalletTotal> =
         apiCall {
@@ -135,7 +141,11 @@ class CategoryRepository(
         icon: String?,
     ): AppResult<Category> =
         apiCall {
-            client.post(api("categories")) { json(CreateCategoryRequest(name, type, parentId, icon)) }.body<CategoryDto>()
+            client
+                .post(
+                    api("categories"),
+                ) { json(CreateCategoryRequest(name, type, parentId, icon)) }
+                .body<CategoryDto>()
         }.onSuccess { refresh() }.map(CategoryDto::toDomain)
 
     suspend fun update(
@@ -148,7 +158,10 @@ class CategoryRepository(
             .map(CategoryDto::toDomain)
 
     suspend fun delete(id: String): AppResult<Unit> =
-        apiCall { client.delete(api("categories/$id")); Unit }.onSuccess { refresh() }
+        apiCall {
+            client.delete(api("categories/$id"))
+            Unit
+        }.onSuccess { refresh() }
 
     private companion object {
         const val KEY = "categories"
@@ -186,7 +199,10 @@ class ExchangeRateRepository(
         }.onSuccess { refresh() }
 
     suspend fun delete(id: String): AppResult<Unit> =
-        apiCall { client.delete(api("exchange-rates/$id")); Unit }.onSuccess { refresh() }
+        apiCall {
+            client.delete(api("exchange-rates/$id"))
+            Unit
+        }.onSuccess { refresh() }
 
     suspend fun convert(
         amount: BigDecimal,
@@ -195,12 +211,13 @@ class ExchangeRateRepository(
         date: LocalDate?,
     ): AppResult<ConversionDto> =
         apiCall {
-            client.get(api("exchange-rates/convert")) {
-                parameter("amount", amount.toStringExpanded())
-                parameter("from", from.value)
-                parameter("to", to.value)
-                date?.let { parameter("date", it.toString()) }
-            }.body<ConversionDto>()
+            client
+                .get(api("exchange-rates/convert")) {
+                    parameter("amount", amount.toStringExpanded())
+                    parameter("from", from.value)
+                    parameter("to", to.value)
+                    date?.let { parameter("date", it.toString()) }
+                }.body<ConversionDto>()
         }
 
     private companion object {

@@ -81,4 +81,12 @@
     <string name="all_wallets">All wallets</string>
     <string name="category_recent">Recent</string>
     <string name="category_none">None</string>
+    <string name="wallet_type_CASH">Cash</string>
+    <string name="wallet_type_BANK_ACCOUNT">Bank account</string>
+    <string name="wallet_type_E_WALLET">E-wallet</string>
+    <string name="wallet_type_CREDIT_CARD">Credit card</string>
+    <string name="wallet_type_OTHER">Other</string>
+    <string name="app_locked">The app is locked</string>
+    <string name="unlock">Unlock</string>
+    <string name="unlock_reason">Unlock Finance Manage</string>
 </resources>

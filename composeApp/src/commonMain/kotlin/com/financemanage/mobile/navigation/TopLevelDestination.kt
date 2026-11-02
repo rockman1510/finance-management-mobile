@@ -10,6 +10,10 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.financemanage.mobile.core.navigation.AssetsRoute
+import com.financemanage.mobile.core.navigation.HomeRoute
+import com.financemanage.mobile.core.navigation.PlanRoute
+import com.financemanage.mobile.core.navigation.TransactionsRoute
 import com.financemanage.mobile.core.ui.resources.Res
 import com.financemanage.mobile.core.ui.resources.tab_assets
 import com.financemanage.mobile.core.ui.resources.tab_home
@@ -31,13 +35,13 @@ enum class TopLevelDestination(
 ) {
     HOME(HomeRoute, HomeRoute::class, Res.string.tab_home, Icons.Filled.Home, Icons.Outlined.Home),
     TRANSACTIONS(
-        TransactionsRoute,
+        TransactionsRoute(),
         TransactionsRoute::class,
         Res.string.tab_transactions,
         Icons.AutoMirrored.Filled.ReceiptLong,
         Icons.AutoMirrored.Outlined.ReceiptLong,
     ),
-    PLAN(PlanRoute, PlanRoute::class, Res.string.tab_plan, Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+    PLAN(PlanRoute(), PlanRoute::class, Res.string.tab_plan, Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
     ASSETS(
         AssetsRoute,
         AssetsRoute::class,

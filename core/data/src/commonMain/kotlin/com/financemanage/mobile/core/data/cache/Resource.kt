@@ -67,7 +67,14 @@ fun <T> CoroutineScope.memoryResource(fetch: suspend () -> AppResult<T>): Resour
     val memory = MutableStateFlow<Cached<T>?>(null)
     return ResourceHolder(this, memory.map { it }) {
         val result = fetch()
-        if (result is AppResult.Success) memory.value = Cached(result.value, kotlinx.datetime.Clock.System.now())
+        if (result is AppResult.Success) {
+            memory.value =
+                Cached(
+                    result.value,
+                    kotlinx.datetime.Clock.System
+                        .now(),
+                )
+        }
         result
     }
 }

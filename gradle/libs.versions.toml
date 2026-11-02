@@ -38,6 +38,11 @@ kvault = "1.12.0"
 coil = "3.2.0"
 vico = "2.1.3"
 firebase-bom = "33.15.0"
+androidx-credentials = "1.5.0"
+googleid = "1.1.1"
+androidx-biometric = "1.1.0"
+androidx-fragment = "1.8.6"
+qrose = "1.0.1"
 
 [libraries]
 # KotlinX
@@ -96,6 +101,12 @@ coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.r
 vico-multiplatform = { module = "com.patrykandpatrick.vico:multiplatform", version.ref = "vico" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidx-credentials" }
+androidx-credentials-play-services = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidx-credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
+androidx-fragment = { module = "androidx.fragment:fragment-ktx", version.ref = "androidx-fragment" }
+qrose = { module = "io.github.alexzhirkevich:qrose", version.ref = "qrose" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "androidx-biometric" }
 
 # Gradle plugins used by build-logic
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }

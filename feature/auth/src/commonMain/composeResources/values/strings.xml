@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_title">Quản lý tài chính cá nhân</string>
+    <string name="welcome_subtitle">Theo dõi thu chi, ngân sách, tiết kiệm và tài sản ở một nơi.</string>
+    <string name="sign_in">Đăng nhập</string>
+    <string name="sign_up">Tạo tài khoản</string>
+    <string name="sign_in_google">Đăng nhập với Google</string>
+    <string name="or">hoặc</string>
+    <string name="email">E-mail</string>
+    <string name="password">Mật khẩu</string>
+    <string name="full_name">Họ và tên</string>
+    <string name="new_password">Mật khẩu mới</string>
+    <string name="password_hint">8–72 ký tự</string>
+    <string name="forgot_password">Quên mật khẩu?</string>
+    <string name="have_account">Đã có tài khoản? Đăng nhập</string>
+    <string name="no_account">Chưa có tài khoản? Tạo tài khoản</string>
+    <string name="error_email_invalid">E-mail không hợp lệ</string>
+    <string name="error_password_length">Mật khẩu phải có 8–72 ký tự</string>
+    <string name="error_email_taken">E-mail này đã được dùng</string>
+    <string name="error_invalid_code">Mã không đúng</string>
+    <string name="error_google_disabled">Đăng nhập Google chưa được bật</string>
+    <string name="error_google_failed">Không lấy được tài khoản Google</string>
+    <string name="two_factor_title">Xác minh hai bước</string>
+    <string name="two_factor_message">Nhập mã 6 số trong ứng dụng xác thực (Google Authenticator…).</string>
+    <string name="two_factor_use_recovery">Dùng mã khôi phục</string>
+    <string name="two_factor_use_code">Dùng mã 6 số</string>
+    <string name="recovery_code">Mã khôi phục</string>
+    <string name="verify">Xác minh</string>
+    <string name="challenge_expired">Phiên xác minh đã hết hạn. Vui lòng đăng nhập lại.</string>
+    <string name="forgot_title">Quên mật khẩu</string>
+    <string name="forgot_message">Nhập e-mail để nhận mã đặt lại mật khẩu.</string>
+    <string name="send_code">Gửi mã</string>
+    <string name="code_sent">Nếu e-mail tồn tại, chúng tôi đã gửi mã gồm 6 số.</string>
+    <string name="reset_code">Mã 6 số</string>
+    <string name="reset_password">Đặt lại mật khẩu</string>
+    <string name="reset_done">Đã đặt lại mật khẩu. Vui lòng đăng nhập.</string>
+</resources>

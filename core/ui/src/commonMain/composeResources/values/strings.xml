@@ -81,4 +81,12 @@
     <string name="all_wallets">Tất cả ví</string>
     <string name="category_recent">Gần đây</string>
     <string name="category_none">Không có</string>
+    <string name="wallet_type_CASH">Tiền mặt</string>
+    <string name="wallet_type_BANK_ACCOUNT">Tài khoản ngân hàng</string>
+    <string name="wallet_type_E_WALLET">Ví điện tử</string>
+    <string name="wallet_type_CREDIT_CARD">Thẻ tín dụng</string>
+    <string name="wallet_type_OTHER">Khác</string>
+    <string name="app_locked">Ứng dụng đang khóa</string>
+    <string name="unlock">Mở khóa</string>
+    <string name="unlock_reason">Mở khóa Finance Manage</string>
 </resources>

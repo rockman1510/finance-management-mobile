@@ -56,7 +56,13 @@ fun ProgressRing(
         Canvas(Modifier.size(size)) {
             val stroke = 6.dp.toPx()
             drawArc(color.copy(alpha = 0.2f), 0f, 360f, false, style = Stroke(stroke))
-            drawArc(color, -90f, 360f * percent.coerceIn(0, 100) / 100f, false, style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(
+                color,
+                -90f,
+                360f * percent.coerceIn(0, 100) / 100f,
+                false,
+                style = Stroke(stroke, cap = StrokeCap.Round),
+            )
         }
         Text("$percent%", style = MaterialTheme.typography.labelMedium)
     }

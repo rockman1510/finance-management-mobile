@@ -11,3 +11,5 @@ actual fun platformApiConfig(): ApiConfig =
     } else {
         ApiConfig(baseUrl = PRODUCTION_API_BASE_URL, enableLogging = false)
     }
+
+actual fun platformGoogleWebClientId(): String? = null

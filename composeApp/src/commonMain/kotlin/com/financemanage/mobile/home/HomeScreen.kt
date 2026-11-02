@@ -24,7 +24,7 @@ import org.jetbrains.compose.resources.stringResource
 /** Home (F12): greeting, notification bell, avatar → Settings. Blocks come with their features. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onOpenSettings: () -> Unit) {
     Scaffold(
         contentWindowInsets = WindowInsets(0.dp),
         topBar = {

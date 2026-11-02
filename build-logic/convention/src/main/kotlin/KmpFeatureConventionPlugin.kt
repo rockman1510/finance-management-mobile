@@ -21,6 +21,7 @@ class KmpFeatureConventionPlugin : Plugin<Project> {
                     implementation(project(":core:network"))
                     implementation(project(":core:data"))
                     implementation(project(":core:ui"))
+                    implementation(project(":core:navigation"))
                     implementation(libs.library("koin-core"))
                     implementation(libs.library("koin-compose"))
                     implementation(libs.library("koin-compose-viewmodel"))

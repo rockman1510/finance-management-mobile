@@ -115,7 +115,11 @@ fun DateField(
                     open = false
                 }) { Text(stringResource(Res.string.action_select)) }
             },
-            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(Res.string.action_cancel)) } },
+            dismissButton = {
+                TextButton(
+                    onClick = { open = false },
+                ) { Text(stringResource(Res.string.action_cancel)) }
+            },
         ) {
             DatePicker(state = state)
         }

@@ -22,9 +22,18 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK
-        run: ./gradlew :composeApp:assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :composeApp:assembleDebug --continue 2>&1 | tee build.log
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest --continue 2>&1 | tee test.log
+      - name: Summarize errors
+        if: failure()
+        run: |
+          echo "==================== ERRORS ===================="
+          cat build.log test.log 2>/dev/null | grep -E "^e: |What went wrong|^> |FAILED|Could not|error:" | grep -v "^> Task" | head -150 || true
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
@@ -57,9 +66,17 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - name: Shared tests on the iOS simulator
-        run: ./gradlew iosSimulatorArm64Test --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew iosSimulatorArm64Test --continue 2>&1 | tee ios.log
       - name: Build the iOS app
         run: |
+          set -o pipefail
           xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee xcode.log
+      - name: Summarize errors
+        if: failure()
+        run: |
+          echo "==================== ERRORS ===================="
+          cat ios.log xcode.log 2>/dev/null | grep -E "^e: |What went wrong|^> |FAILED|Could not|error:" | grep -v "^> Task" | head -150 || true

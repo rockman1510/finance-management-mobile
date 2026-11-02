@@ -32,6 +32,10 @@ kotlin {
             implementation(projects.core.network)
             implementation(projects.core.data)
             implementation(projects.core.ui)
+            implementation(projects.core.navigation)
+            implementation(projects.feature.auth)
+            implementation(projects.feature.onboarding)
+            implementation(projects.feature.settings)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -54,6 +58,7 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.fragment)
             implementation(libs.koin.android)
             implementation(libs.kotlinx.coroutines.android)
         }
@@ -66,6 +71,9 @@ kotlin {
 }
 
 val releaseApiBaseUrl: String = providers.gradleProperty("financemanage.apiBaseUrl.release").get()
+
+// OAuth web client id used by Credential Manager for Google sign-in (empty = Google button hidden).
+val googleWebClientId: String = providers.gradleProperty("financemanage.googleWebClientId").getOrElse("")
 
 android {
     namespace = "com.financemanage.mobile"
@@ -97,11 +105,13 @@ android {
         debug {
             // Android emulator -> backend running on the host machine (API §1).
             buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
             manifestPlaceholders["usesCleartextTraffic"] = "true"
         }
         release {
             isMinifyEnabled = false
             buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
             manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
     }

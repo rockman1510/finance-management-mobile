@@ -128,7 +128,12 @@ fun AmountTextField(
         error = error,
         enabled = enabled,
         keyboardType = KeyboardType.Decimal,
-        trailingIcon = { Text(MoneyFormatter.symbol(currency), modifier = Modifier.size(width = 48.dp, height = 24.dp)) },
+        trailingIcon = {
+            Text(
+                MoneyFormatter.symbol(currency),
+                modifier = Modifier.size(width = 48.dp, height = 24.dp),
+            )
+        },
     )
 }
 

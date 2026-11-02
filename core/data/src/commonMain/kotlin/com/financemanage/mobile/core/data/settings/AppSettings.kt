@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -20,7 +21,22 @@ data class UserPreferences(
     val onboardingCompleted: Boolean = false,
     /** Epoch ms until which the "turn on two-step verification" card stays hidden (F04). */
     val twoFactorCardHiddenUntil: Long? = null,
-)
+    /** Require fingerprint / Face ID (or the device passcode) when returning to the app (F04). */
+    val appLockEnabled: Boolean = false,
+    /** Lock again after this many minutes in the background: 1, 5 or 15. */
+    val relockAfterMinutes: Int = DEFAULT_RELOCK_MINUTES,
+    /** Recently used category ids, most recent first (F06 picker). */
+    val recentCategoryIds: List<String> = emptyList(),
+    /** Last wallet used in Quick add (F07). */
+    val lastWalletId: String? = null,
+    /** Notification permission was already requested (F20). */
+    val notificationPermissionAsked: Boolean = false,
+) {
+    companion object {
+        const val DEFAULT_RELOCK_MINUTES = 5
+        const val MAX_RECENT_CATEGORIES = 8
+    }
+}
 
 class AppSettingsRepository(
     private val dataStore: DataStore<Preferences>,
@@ -53,6 +69,37 @@ class AppSettingsRepository(
         dataStore.edit { it[TWO_FACTOR_CARD_HIDDEN_UNTIL] = epochMillis }
     }
 
+    suspend fun setAppLock(
+        enabled: Boolean,
+        relockAfterMinutes: Int,
+    ) {
+        dataStore.edit {
+            it[APP_LOCK_ENABLED] = enabled
+            it[RELOCK_AFTER_MINUTES] = relockAfterMinutes
+        }
+    }
+
+    suspend fun rememberCategory(categoryId: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[RECENT_CATEGORIES]?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+            val updated =
+                (
+                    listOf(
+                        categoryId,
+                    ) + current.filter { it != categoryId }
+                ).take(UserPreferences.MAX_RECENT_CATEGORIES)
+            prefs[RECENT_CATEGORIES] = updated.joinToString(",")
+        }
+    }
+
+    suspend fun setLastWallet(walletId: String) {
+        dataStore.edit { it[LAST_WALLET_ID] = walletId }
+    }
+
+    suspend fun setNotificationPermissionAsked() {
+        dataStore.edit { it[NOTIFICATION_PERMISSION_ASKED] = true }
+    }
+
     /** Wipes every preference (sign-out of a deleted account). */
     suspend fun clear() {
         dataStore.edit { it.clear() }
@@ -63,6 +110,11 @@ class AppSettingsRepository(
         val HIDE_BALANCES = booleanPreferencesKey("hide_balances")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         val TWO_FACTOR_CARD_HIDDEN_UNTIL = longPreferencesKey("two_factor_card_hidden_until")
+        val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
+        val RELOCK_AFTER_MINUTES = intPreferencesKey("relock_after_minutes")
+        val RECENT_CATEGORIES = stringPreferencesKey("recent_categories")
+        val LAST_WALLET_ID = stringPreferencesKey("last_wallet_id")
+        val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
     }
 }
 

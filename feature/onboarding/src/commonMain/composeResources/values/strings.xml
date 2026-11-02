@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="step_of">Bước %1$d/%2$d</string>
+    <string name="currency_title">Chọn loại tiền mặc định</string>
+    <string name="currency_message">Báo cáo và tổng số dư sẽ được quy đổi sang loại tiền này.</string>
+    <string name="wallet_title">Tạo ví đầu tiên</string>
+    <string name="wallet_message">Ví là nơi bạn giữ tiền: tiền mặt, tài khoản ngân hàng, ví điện tử…</string>
+    <string name="wallet_default_name">Tiền mặt</string>
+    <string name="wallet_type">Loại ví</string>
+    <string name="current_balance">Số dư hiện tại</string>
+    <string name="budget_title">Đặt ngân sách tháng</string>
+    <string name="budget_message">Giới hạn chi tiêu cho tất cả khoản chi trong tháng.</string>
+    <string name="budget_default_name">Chi tiêu tháng</string>
+    <string name="budget_amount">Ngân sách mỗi tháng</string>
+    <string name="security_title">Bảo vệ tài khoản (không bắt buộc)</string>
+    <string name="security_message">Xác minh hai bước yêu cầu thêm mã 6 số từ ứng dụng Google Authenticator mỗi khi đăng nhập. Bạn có thể bật hoặc tắt bất cứ lúc nào trong Cài đặt.</string>
+    <string name="turn_on_now">Bật ngay</string>
+    <string name="finish">Bắt đầu sử dụng</string>
+    <string name="checking">Đang chuẩn bị…</string>
+</resources>

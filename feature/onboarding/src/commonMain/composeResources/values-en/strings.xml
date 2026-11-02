@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="step_of">Step %1$d of %2$d</string>
+    <string name="currency_title">Choose your default currency</string>
+    <string name="currency_message">Reports and totals are converted to this currency.</string>
+    <string name="wallet_title">Create your first wallet</string>
+    <string name="wallet_message">A wallet is where your money is: cash, bank account, e-wallet…</string>
+    <string name="wallet_default_name">Cash</string>
+    <string name="wallet_type">Wallet type</string>
+    <string name="current_balance">Current balance</string>
+    <string name="budget_title">Set a monthly budget</string>
+    <string name="budget_message">A spending limit for all expenses each month.</string>
+    <string name="budget_default_name">Monthly spending</string>
+    <string name="budget_amount">Monthly budget</string>
+    <string name="security_title">Protect your account (optional)</string>
+    <string name="security_message">Two-step verification asks for a 6-digit code from Google Authenticator at each sign-in. You can turn it on or off at any time in Settings.</string>
+    <string name="turn_on_now">Turn on now</string>
+    <string name="finish">Get started</string>
+    <string name="checking">Getting ready…</string>
+</resources>

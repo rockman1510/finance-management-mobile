@@ -58,3 +58,29 @@ value class CurrencyCode(
         }
     }
 }
+
+/** Currencies offered in pickers (any ISO code can still be typed). VND first. */
+val CommonCurrencies: List<CurrencyCode> =
+    listOf(
+        "VND",
+        "USD",
+        "EUR",
+        "JPY",
+        "KRW",
+        "CNY",
+        "SGD",
+        "THB",
+        "AUD",
+        "GBP",
+        "CAD",
+        "CHF",
+        "HKD",
+        "TWD",
+        "MYR",
+        "IDR",
+        "PHP",
+        "INR",
+        "NZD",
+        "LAK",
+        "KHR",
+    ).map(::CurrencyCode)

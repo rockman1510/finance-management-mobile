@@ -4,6 +4,10 @@ plugins {
 
 kotlin {
     sourceSets {
+        androidMain.dependencies {
+            implementation(libs.androidx.biometric)
+            implementation(libs.androidx.fragment)
+        }
         commonMain.dependencies {
             api(projects.core.model)
             api(projects.core.data)
