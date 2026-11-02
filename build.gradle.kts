@@ -19,7 +19,7 @@ subprojects {
     apply(plugin = "io.gitlab.arturbosch.detekt")
 
     extensions.configure<KtlintExtension> {
-        version.set(libs.versions.ktlint.get())
+        version.set(libs.versions.ktlint.cli.get())
         filter {
             exclude { it.file.path.contains("${File.separator}build${File.separator}") }
         }
