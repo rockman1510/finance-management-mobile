@@ -135,10 +135,11 @@ class AuthViewModelsTest {
         }
 
     @Test
-    fun twoFactorClearsAWrongCodeAndExpires() =
+    fun twoFactorClearsAWrongCode() =
         runViewModelTest {
             backend.fail(HttpMethod.Post, "auth/2fa/verify", HttpStatusCode.Unauthorized, ErrorCodes.INVALID_CODE)
-            val viewModel = TwoFactorViewModel(repository(), "challenge-1", expiresInSeconds = 300)
+            // A long expiry: waiting for the answer may move the virtual clock.
+            val viewModel = TwoFactorViewModel(repository(), "challenge-1", expiresInSeconds = 365L * 24 * 3600)
 
             viewModel.verify()
             assertTrue(backend.requests.isEmpty())
@@ -154,12 +155,20 @@ class AuthViewModelsTest {
             viewModel.toggleRecoveryCode()
             assertTrue(viewModel.state.value.useRecoveryCode)
             assertNull(viewModel.state.value.error)
+        }
 
-            advanceTimeBy(301_000)
+    @Test
+    fun anExpiredChallengeCannotBeVerified() =
+        runViewModelTest {
+            val viewModel = TwoFactorViewModel(repository(), "challenge-1", expiresInSeconds = 300)
+            advanceTimeBy(299_000)
+            assertFalse(viewModel.state.value.expired)
+            advanceTimeBy(2_000)
             assertTrue(viewModel.state.value.expired)
-            viewModel.onCodeChange("ABCD-EFGH")
+
+            viewModel.onCodeChange("123456")
             viewModel.verify()
-            assertEquals(1, backend.requests.size)
+            assertTrue(backend.requests.isEmpty())
         }
 
     @Test

@@ -73,10 +73,7 @@ class WalletViewModelsTest {
         runViewModelTest {
             backend.get("wallets", "[${SampleJson.WALLET}]")
             wallets.refresh()
-            backend.on(HttpMethod.Get, "wallets") {
-                throw io.ktor.utils.io.errors
-                    .IOException("offline")
-            }
+            backend.offline(HttpMethod.Get, "wallets")
             val viewModel = WalletListViewModel(wallets, profiles)
             keepCollecting(viewModel.state)
 
