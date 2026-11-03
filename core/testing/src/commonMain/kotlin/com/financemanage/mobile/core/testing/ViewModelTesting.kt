@@ -1,7 +1,9 @@
 package com.financemanage.mobile.core.testing
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -10,6 +12,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Runs a ViewModel test: `Dispatchers.Main` (hence `viewModelScope`) is an [UnconfinedTestDispatcher] sharing the
@@ -19,11 +22,30 @@ import kotlinx.coroutines.test.setMain
 fun runViewModelTest(block: suspend TestScope.() -> Unit) {
     val dispatcher = UnconfinedTestDispatcher()
     Dispatchers.setMain(dispatcher)
+    TestEngineDispatcher.target = dispatcher
     try {
         runTest(dispatcher) { block() }
     } finally {
+        TestEngineDispatcher.target = null
         Dispatchers.resetMain()
     }
+}
+
+/**
+ * Dispatcher of the [MockBackend] engine: the running ViewModel test's dispatcher (so mocked HTTP calls run on the
+ * test scheduler, never on another thread while `Dispatchers.Main` is reset), [Dispatchers.Default] otherwise.
+ */
+internal object TestEngineDispatcher : CoroutineDispatcher() {
+    var target: CoroutineDispatcher? = null
+
+    private val current: CoroutineDispatcher get() = target ?: Dispatchers.Default
+
+    override fun isDispatchNeeded(context: CoroutineContext): Boolean = current.isDispatchNeeded(context)
+
+    override fun dispatch(
+        context: CoroutineContext,
+        block: Runnable,
+    ) = current.dispatch(context, block)
 }
 
 /** Keeps a `WhileSubscribed` flow active for the rest of the test. */

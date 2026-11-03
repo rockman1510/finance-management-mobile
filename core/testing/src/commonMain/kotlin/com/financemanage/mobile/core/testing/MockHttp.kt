@@ -6,6 +6,7 @@ import com.financemanage.mobile.core.network.auth.TokenStore
 import com.financemanage.mobile.core.network.createHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.MockEngineConfig
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -30,7 +31,13 @@ fun mockHttpClient(
     handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
 ): HttpClient =
     createHttpClient(
-        engine = MockEngine(handler),
+        engine =
+            MockEngine(
+                MockEngineConfig().apply {
+                    dispatcher = TestEngineDispatcher
+                    addHandler(handler)
+                },
+            ),
         config = ApiConfig(baseUrl = TEST_BASE_URL),
         tokenStore = tokenStore,
         sessionEvents = sessionEvents,
