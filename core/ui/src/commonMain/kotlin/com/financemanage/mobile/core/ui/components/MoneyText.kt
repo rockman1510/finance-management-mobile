@@ -20,6 +20,7 @@ import org.jetbrains.compose.resources.stringResource
  * Displays an amount with the `vi-VN` format (`1.250.000 ₫`). Respects the "hide balances" setting.
  *
  * @param colorBySign negative amounts in the expense colour, positive ones in the income colour.
+ * @param color explicit colour, used when [colorBySign] is false.
  */
 @Composable
 fun MoneyText(
@@ -29,11 +30,12 @@ fun MoneyText(
     colorBySign: Boolean = false,
     showPlusSign: Boolean = false,
     hidden: Boolean = LocalHideBalances.current,
+    color: Color = Color.Unspecified,
 ) {
     val colors = FinanceTheme.colors
-    val color =
+    val textColor =
         when {
-            !colorBySign -> Color.Unspecified
+            !colorBySign -> color
             money.isNegative -> colors.expense
             money.isPositive -> colors.income
             else -> Color.Unspecified
