@@ -9,6 +9,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.io.IOException
 
 typealias MockResponder = suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData
 
@@ -73,6 +74,12 @@ class MockBackend(
         status: HttpStatusCode,
         code: String,
     ) = on(method, path) { respondError(status, code) }
+
+    /** Simulates no connection for [method] [path] (→ `AppError.Network`). */
+    fun offline(
+        method: HttpMethod,
+        path: String,
+    ) = on(method, path) { throw IOException("offline") }
 
     fun requests(
         method: HttpMethod,

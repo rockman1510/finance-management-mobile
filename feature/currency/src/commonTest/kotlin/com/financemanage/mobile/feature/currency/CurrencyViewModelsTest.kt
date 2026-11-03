@@ -22,7 +22,8 @@ import kotlin.test.assertTrue
 
 private const val RATES =
     """[{"id":"r1","base":"USD","quote":"VND","rate":25400,"effectiveDate":"2026-11-01","source":"MANUAL","global":false},
-    {"id":"r2","base":"EUR","quote":"VND","rate":27150.5,"effectiveDate":"2026-10-30","source":"SYSTEM","global":true}]"""
+    {"id":"r2","base":"EUR","quote":"VND","rate":27150.5,"effectiveDate":"2026-10-30",
+    "source":"SYSTEM","global":true}]"""
 
 class CurrencyViewModelsTest {
     private val backend = MockBackend()

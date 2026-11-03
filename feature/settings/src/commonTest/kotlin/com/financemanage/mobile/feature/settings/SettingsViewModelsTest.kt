@@ -234,7 +234,8 @@ class SettingsViewModelsTest {
         runViewModelTest {
             backend.get(
                 "me/sessions",
-                """[{"id":"s1","deviceName":"Pixel 8","current":true},{"id":"s2","deviceName":"iPhone","current":false}]""",
+                """[{"id":"s1","deviceName":"Pixel 8","current":true},
+                {"id":"s2","deviceName":"iPhone","current":false}]""",
             )
             backend.delete("me/sessions/s2")
             backend.delete("me/sessions")
