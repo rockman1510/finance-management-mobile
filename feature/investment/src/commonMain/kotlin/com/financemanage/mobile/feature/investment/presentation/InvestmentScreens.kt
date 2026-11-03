@@ -72,6 +72,7 @@ import com.financemanage.mobile.core.ui.resources.field_note
 import com.financemanage.mobile.core.ui.resources.field_required
 import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
+import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
 import com.financemanage.mobile.feature.investment.data.AssetDto
 import com.financemanage.mobile.feature.investment.data.AssetTypes
@@ -349,18 +350,19 @@ fun AssetDetailScreen(
                             stringResource(Res.string.update_price),
                         )
                     }
+                    val canTrade = !state.busy && LocalIsOnline.current
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         Button(
                             onClick = { sheet = Sheet.BUY },
-                            enabled = !state.busy,
+                            enabled = canTrade,
                         ) { Text(stringResource(Res.string.buy)) }
                         OutlinedButton(
                             onClick = { sheet = Sheet.SELL },
-                            enabled = !state.busy,
+                            enabled = canTrade,
                         ) { Text(stringResource(Res.string.sell)) }
                         OutlinedButton(
                             onClick = { sheet = Sheet.INCOME },
-                            enabled = !state.busy,
+                            enabled = canTrade,
                         ) { Text(stringResource(Res.string.dividend)) }
                     }
                 }

@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -32,6 +33,7 @@ import com.financemanage.mobile.core.navigation.TransferRoute
 import com.financemanage.mobile.core.ui.components.OfflineBanner
 import com.financemanage.mobile.core.ui.resources.Res
 import com.financemanage.mobile.core.ui.resources.tab_add
+import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import org.jetbrains.compose.resources.stringResource
 
 /** Signed-in shell: offline banner, bottom bar with 5 items and the NavHost. */
@@ -59,12 +61,14 @@ fun MainScaffold(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (!isOnline) OfflineBanner()
-            NavHost(
-                navController = navController,
-                startDestination = HomeRoute,
-                modifier = Modifier.weight(1f),
-            ) {
-                appGraph(navController)
+            CompositionLocalProvider(LocalIsOnline provides isOnline) {
+                NavHost(
+                    navController = navController,
+                    startDestination = HomeRoute,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    appGraph(navController)
+                }
             }
         }
     }

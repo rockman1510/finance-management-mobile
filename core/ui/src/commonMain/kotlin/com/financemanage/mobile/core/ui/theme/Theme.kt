@@ -14,6 +14,9 @@ private val LocalFinanceColors = staticCompositionLocalOf { LightFinanceColors }
 /** `true` when every amount in the app must be hidden ("eye" button, F12). */
 val LocalHideBalances = compositionLocalOf { false }
 
+/** Whether the device is online; actions that need the server (pay, settle, trade…) are disabled offline (F21). */
+val LocalIsOnline = compositionLocalOf { true }
+
 @Composable
 fun FinanceTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

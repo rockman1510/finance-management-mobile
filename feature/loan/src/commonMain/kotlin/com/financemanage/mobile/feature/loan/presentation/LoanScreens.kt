@@ -68,6 +68,7 @@ import com.financemanage.mobile.core.ui.resources.field_invalid_amount
 import com.financemanage.mobile.core.ui.resources.field_note
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
+import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
 import com.financemanage.mobile.feature.loan.data.InstallmentDto
 import com.financemanage.mobile.feature.loan.data.LoanSummaryDto
@@ -406,6 +407,7 @@ fun LoanCreateScreen(
                 stringResource(CoreRes.string.action_save),
                 onClick = viewModel::save,
                 loading = state.loading,
+                enabled = LocalIsOnline.current,
             )
         }
     }
@@ -460,16 +462,28 @@ fun LoanDetailScreen(
                             Button(onClick = {
                                 viewModel.newAction()
                                 action = LoanAction.REPAY
-                            }, enabled = !state.busy) { Text(stringResource(Res.string.repay)) }
+                            }, enabled = !state.busy && LocalIsOnline.current) {
+                                Text(
+                                    stringResource(Res.string.repay),
+                                )
+                            }
                             OutlinedButton(onClick = {
                                 viewModel.newAction()
                                 action = LoanAction.PREPAY
-                            }, enabled = !state.busy) { Text(stringResource(Res.string.prepay)) }
+                            }, enabled = !state.busy && LocalIsOnline.current) {
+                                Text(
+                                    stringResource(Res.string.prepay),
+                                )
+                            }
                         }
                         if (summary.repaymentMethod != "INTEREST_FREE") {
                             OutlinedButton(onClick = {
                                 action = LoanAction.RATE
-                            }, enabled = !state.busy) { Text(stringResource(Res.string.change_rate)) }
+                            }, enabled = !state.busy && LocalIsOnline.current) {
+                                Text(
+                                    stringResource(Res.string.change_rate),
+                                )
+                            }
                         }
                     }
                 }

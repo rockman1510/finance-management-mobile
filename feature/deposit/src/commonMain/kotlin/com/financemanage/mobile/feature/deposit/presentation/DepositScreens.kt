@@ -60,8 +60,10 @@ import com.financemanage.mobile.core.ui.resources.delete_confirm_message
 import com.financemanage.mobile.core.ui.resources.field_currency
 import com.financemanage.mobile.core.ui.resources.field_note
 import com.financemanage.mobile.core.ui.resources.field_required
+import com.financemanage.mobile.core.ui.resources.processing
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
+import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
 import com.financemanage.mobile.feature.deposit.data.DepositDto
 import com.financemanage.mobile.feature.deposit.resources.Res
@@ -387,7 +389,12 @@ fun DepositCreateScreen(
             state.preview?.let { PreviewCard(it, state.currency) }
             PendingBanner(state.pending)
             state.error?.let { Text(it.userMessage(DepositErrors), color = MaterialTheme.colorScheme.error) }
-            LoadingButton(stringResource(CoreRes.string.action_save), onClick = viewModel::save, loading = state.saving)
+            LoadingButton(
+                stringResource(CoreRes.string.action_save),
+                onClick = viewModel::save,
+                loading = state.saving,
+                enabled = LocalIsOnline.current,
+            )
         }
     }
 }
@@ -452,7 +459,7 @@ fun DepositDetailScreen(
                         LoadingButton(stringResource(Res.string.settle), onClick = {
                             viewModel.loadQuote(state.today)
                             settleSheet = true
-                        }, loading = state.busy)
+                        }, loading = state.busy, enabled = LocalIsOnline.current)
                     }
                 }
             }
@@ -487,11 +494,7 @@ fun DepositDetailScreen(
 
 @Composable
 private fun statusText(status: AsyncStatus): String =
-    stringResource(com.financemanage.mobile.core.ui.resources.Res.string.processing).takeIf {
-        status ==
-            AsyncStatus.PENDING
-    }
-        ?: status.name
+    if (status == AsyncStatus.PENDING) stringResource(CoreRes.string.processing) else status.name
 
 @Composable
 private fun SettleSheet(

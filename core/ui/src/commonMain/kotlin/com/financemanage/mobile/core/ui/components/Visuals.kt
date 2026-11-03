@@ -174,8 +174,8 @@ fun BarChart(
 fun LegendRow(
     color: Color,
     label: String,
-    trailing: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    trailing: @Composable () -> Unit,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = Spacing.xs),

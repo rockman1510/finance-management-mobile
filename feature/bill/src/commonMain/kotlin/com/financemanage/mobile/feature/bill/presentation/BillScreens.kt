@@ -75,6 +75,7 @@ import com.financemanage.mobile.core.ui.resources.field_note
 import com.financemanage.mobile.core.ui.resources.field_required
 import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
+import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
 import com.financemanage.mobile.feature.bill.data.Bill
 import com.financemanage.mobile.feature.bill.resources.Res
@@ -211,7 +212,7 @@ fun BillsTab(
                                         if (bill.active) {
                                             Button(
                                                 onClick = { viewModel.pay(bill) },
-                                                enabled = state.payingId == null,
+                                                enabled = state.payingId == null && LocalIsOnline.current,
                                             ) { Text(stringResource(Res.string.pay)) }
                                         }
                                     }
@@ -312,6 +313,7 @@ fun BillDetailScreen(
                             stringResource(Res.string.pay_now),
                             onClick = { paySheet = true },
                             loading = state.busy,
+                            enabled = LocalIsOnline.current,
                         )
                         OutlinedButton(
                             onClick = viewModel::skip,
