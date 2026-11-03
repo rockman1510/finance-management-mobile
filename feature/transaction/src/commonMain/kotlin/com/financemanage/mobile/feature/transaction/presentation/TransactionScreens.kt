@@ -51,6 +51,8 @@ import com.financemanage.mobile.core.ui.components.ResourceContent
 import com.financemanage.mobile.core.ui.components.SwitchRow
 import com.financemanage.mobile.core.ui.components.walletLabel
 import com.financemanage.mobile.core.ui.error.userMessage
+import com.financemanage.mobile.core.ui.resources.action_delete
+import com.financemanage.mobile.core.ui.resources.action_edit
 import com.financemanage.mobile.core.ui.resources.action_save
 import com.financemanage.mobile.core.ui.resources.delete_confirm_message
 import com.financemanage.mobile.core.ui.resources.field_amount
@@ -119,12 +121,14 @@ fun TransactionDetailScreen(
         onBack = onBack,
         actions = {
             if (transaction?.editable == true) {
-                IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, contentDescription = null) }
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Outlined.Edit, contentDescription = stringResource(CoreRes.string.action_edit))
+                }
             }
             if (transaction != null && (transaction.editable || transaction.transferId != null)) {
                 IconButton(
                     onClick = { confirmDelete = true },
-                ) { Icon(Icons.Outlined.Delete, contentDescription = null) }
+                ) { Icon(Icons.Outlined.Delete, contentDescription = stringResource(CoreRes.string.action_delete)) }
             }
         },
     ) { padding ->
@@ -375,7 +379,7 @@ fun RecurringEditScreen(
         actions = {
             IconButton(
                 onClick = { confirmDelete = true },
-            ) { Icon(Icons.Outlined.Delete, contentDescription = null) }
+            ) { Icon(Icons.Outlined.Delete, contentDescription = stringResource(CoreRes.string.action_delete)) }
         },
     ) { padding ->
         FormColumn(padding) {

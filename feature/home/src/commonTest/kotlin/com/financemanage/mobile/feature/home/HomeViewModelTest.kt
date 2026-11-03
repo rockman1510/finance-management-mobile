@@ -32,8 +32,7 @@ private val USD_ME = SampleJson.ME.replace("\"defaultCurrency\":\"VND\"", "\"def
 private fun budget(
     id: String,
     percent: Int,
-) =
-    """{"id":"$id","name":"$id","amount":100,"currency":"USD",
+) = """{"id":"$id","name":"$id","amount":100,"currency":"USD",
     "current":{"spent":$percent,"percent":$percent,"state":"ON_TRACK"}}"""
 
 private fun goal(

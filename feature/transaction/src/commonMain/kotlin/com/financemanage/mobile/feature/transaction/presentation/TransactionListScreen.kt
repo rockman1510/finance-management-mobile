@@ -64,6 +64,7 @@ import com.financemanage.mobile.core.ui.components.ListSkeleton
 import com.financemanage.mobile.core.ui.components.MoneyText
 import com.financemanage.mobile.core.ui.components.RefreshOnResume
 import com.financemanage.mobile.core.ui.error.userMessage
+import com.financemanage.mobile.core.ui.resources.action_back
 import com.financemanage.mobile.core.ui.resources.delete_confirm_message
 import com.financemanage.mobile.core.ui.resources.today
 import com.financemanage.mobile.core.ui.resources.yesterday
@@ -132,7 +133,10 @@ fun TransactionListScreen(
             navigationIcon = {
                 if (onBack != null) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreRes.string.action_back),
+                        )
                     }
                 }
             },
