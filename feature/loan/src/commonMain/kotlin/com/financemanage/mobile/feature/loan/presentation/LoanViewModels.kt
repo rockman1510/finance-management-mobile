@@ -171,13 +171,15 @@ class LoanDetailViewModel(
         amount: BigDecimal,
         date: LocalDate?,
     ) {
+        // A rate change needs the date it takes effect from.
+        if (action == LoanAction.RATE && date == null) return
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             val result =
                 when (action) {
                     LoanAction.REPAY -> repository.repay(id, amount, date, idempotency.current())
                     LoanAction.PREPAY -> repository.prepay(id, amount, date, idempotency.current())
-                    LoanAction.RATE -> repository.changeRate(id, date ?: return@launch, amount)
+                    LoanAction.RATE -> repository.changeRate(id, requireNotNull(date), amount)
                 }
             if (result is AppResult.Success) idempotency.reset()
             mutableState.update { it.copy(busy = false, error = (result as? AppResult.Failure)?.error) }

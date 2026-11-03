@@ -16,6 +16,7 @@ import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.Profile
 import com.financemanage.mobile.core.model.domain.Wallet
+import com.financemanage.mobile.core.model.getOrNull
 import com.financemanage.mobile.core.ui.components.PendingAction
 import com.financemanage.mobile.feature.home.data.HomeBill
 import com.financemanage.mobile.feature.home.data.HomeBudget
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -121,7 +123,9 @@ class HomeViewModel(
         }
     }
 
-    private suspend fun currencyCode(): CurrencyCode = profiles.current()?.defaultCurrency ?: CurrencyCode.DEFAULT
+    /** The default currency; on a first launch the profile is not cached yet, so it is fetched first. */
+    private suspend fun currencyCode(): CurrencyCode =
+        (profiles.current() ?: profiles.refresh().getOrNull())?.defaultCurrency ?: CurrencyCode.DEFAULT
 
     fun refresh() {
         viewModelScope.launch {
@@ -134,7 +138,7 @@ class HomeViewModel(
     }
 
     fun toggleHideBalances() {
-        viewModelScope.launch { settings.setHideBalances(!state.value.extras.hideBalances) }
+        viewModelScope.launch { settings.setHideBalances(!settings.preferences.first().hideBalances) }
     }
 
     fun payBill(bill: HomeBill) {

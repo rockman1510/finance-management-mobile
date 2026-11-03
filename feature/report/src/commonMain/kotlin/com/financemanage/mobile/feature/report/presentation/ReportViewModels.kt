@@ -15,6 +15,7 @@ import com.financemanage.mobile.feature.report.data.DashboardDto
 import com.financemanage.mobile.feature.report.data.NetWorthDto
 import com.financemanage.mobile.feature.report.data.ReportRepository
 import com.financemanage.mobile.feature.report.data.SummaryDto
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -78,6 +79,9 @@ class ReportsViewModel(
     private val mutableState = MutableStateFlow(ReportsUiState())
     val state: StateFlow<ReportsUiState> = mutableState.asStateFlow()
 
+    /** The running load: a newer filter cancels it so that older results never overwrite newer ones. */
+    private var loadJob: Job? = null
+
     init {
         viewModelScope.launch {
             val profile = profiles.current()
@@ -138,25 +142,27 @@ class ReportsViewModel(
         val to = current.to ?: return
         val granularity = if (from.daysUntil(to) < MAX_DAILY_DAYS) "DAY" else "MONTH"
         mutableState.update { it.copy(loading = true, error = null) }
-        viewModelScope.launch {
-            val summary = repository.summary(from, to, current.currency)
-            val categories = repository.categories(from, to, current.currency, current.categoryType)
-            val cashFlow = repository.cashFlow(from, to, current.currency, granularity)
-            mutableState.update {
-                it.copy(
-                    loading = false,
-                    summary = (summary as? AppResult.Success)?.value,
-                    categories = (categories as? AppResult.Success)?.value,
-                    cashFlow = (cashFlow as? AppResult.Success)?.value,
-                    error =
-                        listOf(
-                            summary,
-                            categories,
-                            cashFlow,
-                        ).filterIsInstance<AppResult.Failure>().firstOrNull()?.error,
-                )
+        loadJob?.cancel()
+        loadJob =
+            viewModelScope.launch {
+                val summary = repository.summary(from, to, current.currency)
+                val categories = repository.categories(from, to, current.currency, current.categoryType)
+                val cashFlow = repository.cashFlow(from, to, current.currency, granularity)
+                mutableState.update {
+                    it.copy(
+                        loading = false,
+                        summary = (summary as? AppResult.Success)?.value,
+                        categories = (categories as? AppResult.Success)?.value,
+                        cashFlow = (cashFlow as? AppResult.Success)?.value,
+                        error =
+                            listOf(
+                                summary,
+                                categories,
+                                cashFlow,
+                            ).filterIsInstance<AppResult.Failure>().firstOrNull()?.error,
+                    )
+                }
             }
-        }
     }
 
     fun exportCsv() {

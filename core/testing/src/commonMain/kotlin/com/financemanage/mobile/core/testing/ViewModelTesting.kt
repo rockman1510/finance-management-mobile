@@ -1,5 +1,7 @@
 package com.financemanage.mobile.core.testing
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,8 +28,30 @@ fun runViewModelTest(block: suspend TestScope.() -> Unit) {
     try {
         runTest(dispatcher) { block() }
     } finally {
+        TrackedViewModels.clear()
         TestEngineDispatcher.target = null
         Dispatchers.resetMain()
+    }
+}
+
+/**
+ * Clears this ViewModel (cancelling its `viewModelScope`) when the [runViewModelTest] ends. Needed for ViewModels
+ * that collect app-wide flows such as `PushBridge`, which would otherwise keep reacting during later tests.
+ */
+fun <T : ViewModel> T.tracked(): T = also { TrackedViewModels.add(it) }
+
+private object TrackedViewModels {
+    private val live = mutableListOf<ViewModel>()
+
+    fun add(viewModel: ViewModel) {
+        live += viewModel
+    }
+
+    fun clear() {
+        val store = ViewModelStore()
+        live.forEachIndexed { index, viewModel -> store.put("vm$index", viewModel) }
+        store.clear()
+        live.clear()
     }
 }
 
