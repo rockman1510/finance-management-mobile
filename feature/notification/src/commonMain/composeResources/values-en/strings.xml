@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications">Notifications</string>
+    <string name="notification_settings">Notification settings</string>
+    <string name="mark_all_read">Mark all as read</string>
+    <string name="no_notifications">No notifications yet</string>
+    <string name="no_notifications_message">Reminders about bills, budgets, deposits and loans will show up here.</string>
+    <string name="unread">Unread</string>
+    <string name="earlier">Earlier</string>
+    <string name="permission_off">Notifications are turned off in the system settings.</string>
+    <string name="open_system_settings">Open settings</string>
+    <string name="turn_on">Turn on notifications</string>
+    <string name="group_deposits">Deposits</string>
+    <string name="group_loans">Loans</string>
+    <string name="group_budgets">Budgets</string>
+    <string name="group_bills">Bills</string>
+    <string name="group_goals">Saving goals</string>
+    <string name="type_DEPOSIT_MATURING_SOON">Deposit maturing soon</string>
+    <string name="type_DEPOSIT_MATURED">Deposit matured</string>
+    <string name="type_INSTALLMENT_DUE_SOON">Installment due soon</string>
+    <string name="type_INSTALLMENT_OVERDUE">Installment overdue</string>
+    <string name="type_LOAN_PAID_OFF">Loan paid off</string>
+    <string name="type_BUDGET_WARNING">Budget almost used up</string>
+    <string name="type_BUDGET_EXCEEDED">Budget exceeded</string>
+    <string name="type_BILL_DUE_SOON">Bill due soon</string>
+    <string name="type_BILL_OVERDUE">Bill overdue</string>
+    <string name="type_BILL_PAYMENT_FAILED">Bill payment failed</string>
+    <string name="type_SAVING_GOAL_MILESTONE">Saving milestone reached</string>
+    <string name="daily_reminder">Daily reminder</string>
+    <string name="daily_reminder_hint">Reminds you to record spending when nothing was recorded that day.</string>
+    <string name="reminder_time">Reminder time</string>
+    <string name="quiet_hours">Quiet hours</string>
+    <string name="quiet_hours_hint">Notifications are kept but not pushed during these hours.</string>
+    <string name="quiet_from">From</string>
+    <string name="quiet_to">To</string>
+</resources>

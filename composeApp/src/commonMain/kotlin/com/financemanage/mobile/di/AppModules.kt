@@ -4,6 +4,7 @@ import com.financemanage.mobile.AppViewModel
 import com.financemanage.mobile.core.data.di.dataModule
 import com.financemanage.mobile.core.data.di.dataPlatformModule
 import com.financemanage.mobile.core.data.outbox.OutboxSync
+import com.financemanage.mobile.core.data.push.PushRegistrar
 import com.financemanage.mobile.core.data.session.SessionManager
 import com.financemanage.mobile.core.network.ApiConfig
 import com.financemanage.mobile.core.network.di.networkModule
@@ -17,6 +18,7 @@ import com.financemanage.mobile.feature.deposit.di.depositModule
 import com.financemanage.mobile.feature.home.di.homeModule
 import com.financemanage.mobile.feature.investment.di.investmentModule
 import com.financemanage.mobile.feature.loan.di.loanModule
+import com.financemanage.mobile.feature.notification.di.notificationModule
 import com.financemanage.mobile.feature.onboarding.di.onboardingModule
 import com.financemanage.mobile.feature.report.di.reportModule
 import com.financemanage.mobile.feature.saving.di.savingModule
@@ -58,6 +60,7 @@ fun appModules(config: ApiConfig): List<Module> =
         loanModule,
         investmentModule,
         reportModule,
+        notificationModule,
     )
 
 fun initKoin(
@@ -71,4 +74,6 @@ fun initKoin(
         }.koin
     // Offline writes (F21) are sent whenever the device is online.
     koin.get<OutboxSync>().start()
+    // Push token registration (F20).
+    koin.get<PushRegistrar>().start()
 }

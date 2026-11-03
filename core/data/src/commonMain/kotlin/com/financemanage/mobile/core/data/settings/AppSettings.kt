@@ -50,6 +50,11 @@ class AppSettingsRepository(
                 hideBalances = prefs[HIDE_BALANCES] ?: false,
                 onboardingCompleted = prefs[ONBOARDING_COMPLETED] ?: false,
                 twoFactorCardHiddenUntil = prefs[TWO_FACTOR_CARD_HIDDEN_UNTIL],
+                appLockEnabled = prefs[APP_LOCK_ENABLED] ?: false,
+                relockAfterMinutes = prefs[RELOCK_AFTER_MINUTES] ?: UserPreferences.DEFAULT_RELOCK_MINUTES,
+                recentCategoryIds = prefs[RECENT_CATEGORIES]?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
+                lastWalletId = prefs[LAST_WALLET_ID],
+                notificationPermissionAsked = prefs[NOTIFICATION_PERMISSION_ASKED] ?: false,
             )
         }
 

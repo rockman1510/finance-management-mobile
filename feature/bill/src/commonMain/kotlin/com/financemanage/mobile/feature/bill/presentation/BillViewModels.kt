@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.financemanage.mobile.core.data.cache.Resource
 import com.financemanage.mobile.core.data.cache.ResourceHolder
+import com.financemanage.mobile.core.data.push.PushBridge
 import com.financemanage.mobile.core.data.shared.CategoryRepository
 import com.financemanage.mobile.core.data.shared.ProfileRepository
 import com.financemanage.mobile.core.data.shared.WalletRepository
@@ -360,6 +361,8 @@ class BillFormViewModel(
                         ),
                     )
                 }
+            // Ask for the notification permission after the first budget / bill (F20; asked once).
+            if (id == null && result is AppResult.Success) PushBridge.requestPermission()
             mutableState.update {
                 it.copy(
                     saving = false,

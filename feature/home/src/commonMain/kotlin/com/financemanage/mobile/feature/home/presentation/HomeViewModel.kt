@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.financemanage.mobile.core.data.cache.Resource
 import com.financemanage.mobile.core.data.cache.ResourceHolder
+import com.financemanage.mobile.core.data.push.PushBridge
 import com.financemanage.mobile.core.data.settings.AppSettingsRepository
 import com.financemanage.mobile.core.data.shared.CategoryRepository
 import com.financemanage.mobile.core.data.shared.ProfileRepository
@@ -110,6 +111,15 @@ class HomeViewModel(
             extras,
         ) { (s, b, bi), g, t, e -> HomeUiState(s, b, bi, g, t, e) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), HomeUiState())
+
+    init {
+        // Foreground push (F20): refresh the bell badge.
+        viewModelScope.launch {
+            PushBridge.received.collect {
+                (repository.unreadCount() as? AppResult.Success)?.let { unread.value = it.value }
+            }
+        }
+    }
 
     private suspend fun currencyCode(): CurrencyCode = profiles.current()?.defaultCurrency ?: CurrencyCode.DEFAULT
 

@@ -10,7 +10,6 @@ import com.financemanage.mobile.core.navigation.BillDetailRoute
 import com.financemanage.mobile.core.navigation.BudgetDetailRoute
 import com.financemanage.mobile.core.navigation.GoalDetailRoute
 import com.financemanage.mobile.core.navigation.HomeRoute
-import com.financemanage.mobile.core.navigation.NotificationSettingsRoute
 import com.financemanage.mobile.core.navigation.NotificationsRoute
 import com.financemanage.mobile.core.navigation.PlanRoute
 import com.financemanage.mobile.core.navigation.ReportsRoute
@@ -27,6 +26,7 @@ import com.financemanage.mobile.feature.home.presentation.HomeDestination
 import com.financemanage.mobile.feature.home.presentation.HomeScreen
 import com.financemanage.mobile.feature.investment.presentation.investmentGraph
 import com.financemanage.mobile.feature.loan.presentation.loanGraph
+import com.financemanage.mobile.feature.notification.presentation.notificationGraph
 import com.financemanage.mobile.feature.report.presentation.reportGraph
 import com.financemanage.mobile.feature.saving.presentation.savingGraph
 import com.financemanage.mobile.feature.settings.presentation.settingsGraph
@@ -73,12 +73,5 @@ fun NavGraphBuilder.appGraph(navController: NavHostController) {
     loanGraph(navController)
     investmentGraph(navController)
     reportGraph(navController)
-
-    // Destinations of features not implemented yet.
-    comingSoon<NotificationSettingsRoute>(navController)
-    comingSoon<NotificationsRoute>(navController)
-}
-
-private inline fun <reified T : Any> NavGraphBuilder.comingSoon(navController: NavHostController) {
-    composable<T> { ComingSoonScreen(onBack = { navController.popBackStack() }) }
+    notificationGraph(navController, onOpenLink = { navController.navigate(routeFor(it)) })
 }

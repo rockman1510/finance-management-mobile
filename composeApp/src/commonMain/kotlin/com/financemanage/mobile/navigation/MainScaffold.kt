@@ -44,6 +44,7 @@ fun MainScaffold(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
     val showBottomBar = currentDestination == null || TopLevelDestination.entries.any { currentDestination.isOn(it) }
+    PushEffects(navController)
 
     Scaffold(
         bottomBar = {

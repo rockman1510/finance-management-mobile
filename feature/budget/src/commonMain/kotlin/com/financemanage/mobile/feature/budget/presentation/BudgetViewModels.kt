@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.financemanage.mobile.core.data.cache.Resource
 import com.financemanage.mobile.core.data.cache.ResourceHolder
+import com.financemanage.mobile.core.data.push.PushBridge
 import com.financemanage.mobile.core.data.shared.CategoryRepository
 import com.financemanage.mobile.core.data.shared.ProfileRepository
 import com.financemanage.mobile.core.data.shared.WalletRepository
@@ -22,6 +23,7 @@ import com.financemanage.mobile.feature.budget.data.BudgetRepository
 import com.financemanage.mobile.feature.budget.data.BudgetTransactionDto
 import com.financemanage.mobile.feature.budget.data.CreateBudgetRequest
 import com.financemanage.mobile.feature.budget.data.UpdateBudgetRequest
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -233,13 +235,7 @@ class BudgetFormViewModel(
         val start = form.startDate
         val end = form.endDate
         val custom = form.period == BudgetPeriod.CUSTOM
-        val problems =
-            buildSet {
-                if (form.name.isBlank()) add(BudgetProblem.NAME)
-                if (amount == null || amount.signum() <= 0) add(BudgetProblem.AMOUNT)
-                if (custom && (start == null || end == null)) add(BudgetProblem.PERIOD_DATES)
-                if (start != null && end != null && end < start) add(BudgetProblem.END_BEFORE_START)
-            }
+        val problems = problemsOf(form, amount)
         if (problems.isNotEmpty() || amount == null) {
             mutableState.update { it.copy(problems = problems) }
             return
@@ -274,6 +270,8 @@ class BudgetFormViewModel(
                         ),
                     )
                 }
+            // Ask for the notification permission after the first budget / bill (F20; asked once).
+            if (id == null && result is AppResult.Success) PushBridge.requestPermission()
             mutableState.update {
                 it.copy(
                     saving = false,
@@ -282,5 +280,19 @@ class BudgetFormViewModel(
                 )
             }
         }
+    }
+}
+
+private fun problemsOf(
+    form: BudgetFormUiState,
+    amount: BigDecimal?,
+): Set<BudgetProblem> {
+    val start = form.startDate
+    val end = form.endDate
+    return buildSet {
+        if (form.name.isBlank()) add(BudgetProblem.NAME)
+        if (amount == null || amount.signum() <= 0) add(BudgetProblem.AMOUNT)
+        if (form.period == BudgetPeriod.CUSTOM && (start == null || end == null)) add(BudgetProblem.PERIOD_DATES)
+        if (start != null && end != null && end < start) add(BudgetProblem.END_BEFORE_START)
     }
 }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notifications">Thông báo</string>
+    <string name="notification_settings">Cài đặt thông báo</string>
+    <string name="mark_all_read">Đánh dấu tất cả đã đọc</string>
+    <string name="no_notifications">Chưa có thông báo nào</string>
+    <string name="no_notifications_message">Nhắc hạn hóa đơn, ngân sách, tiền gửi và khoản vay sẽ xuất hiện ở đây.</string>
+    <string name="unread">Chưa đọc</string>
+    <string name="earlier">Trước đó</string>
+    <string name="permission_off">Thông báo đang bị tắt trong cài đặt hệ thống.</string>
+    <string name="open_system_settings">Mở cài đặt</string>
+    <string name="turn_on">Bật thông báo</string>
+    <string name="group_deposits">Tiền gửi</string>
+    <string name="group_loans">Vay nợ</string>
+    <string name="group_budgets">Ngân sách</string>
+    <string name="group_bills">Hóa đơn</string>
+    <string name="group_goals">Mục tiêu tiết kiệm</string>
+    <string name="type_DEPOSIT_MATURING_SOON">Tiền gửi sắp đáo hạn</string>
+    <string name="type_DEPOSIT_MATURED">Tiền gửi đã đáo hạn</string>
+    <string name="type_INSTALLMENT_DUE_SOON">Kỳ trả nợ sắp đến hạn</string>
+    <string name="type_INSTALLMENT_OVERDUE">Kỳ trả nợ quá hạn</string>
+    <string name="type_LOAN_PAID_OFF">Khoản vay đã tất toán</string>
+    <string name="type_BUDGET_WARNING">Ngân sách sắp vượt</string>
+    <string name="type_BUDGET_EXCEEDED">Ngân sách đã vượt</string>
+    <string name="type_BILL_DUE_SOON">Hóa đơn sắp đến hạn</string>
+    <string name="type_BILL_OVERDUE">Hóa đơn quá hạn</string>
+    <string name="type_BILL_PAYMENT_FAILED">Thanh toán hóa đơn thất bại</string>
+    <string name="type_SAVING_GOAL_MILESTONE">Đạt mốc tiết kiệm</string>
+    <string name="daily_reminder">Nhắc ghi chép hằng ngày</string>
+    <string name="daily_reminder_hint">Nhắc bạn ghi chi tiêu khi hôm đó chưa có giao dịch nào.</string>
+    <string name="reminder_time">Giờ nhắc</string>
+    <string name="quiet_hours">Giờ yên lặng</string>
+    <string name="quiet_hours_hint">Thông báo vẫn được lưu nhưng không hiện lên trong khoảng giờ này.</string>
+    <string name="quiet_from">Từ</string>
+    <string name="quiet_to">Đến</string>
+</resources>

@@ -4,6 +4,8 @@ import com.financemanage.mobile.core.data.cache.JsonCache
 import com.financemanage.mobile.core.data.database.FinanceDatabase
 import com.financemanage.mobile.core.data.outbox.OutboxSender
 import com.financemanage.mobile.core.data.outbox.OutboxSync
+import com.financemanage.mobile.core.data.push.PushBridge
+import com.financemanage.mobile.core.data.push.PushRegistrar
 import com.financemanage.mobile.core.data.security.SecureTokenStore
 import com.financemanage.mobile.core.data.session.SessionManager
 import com.financemanage.mobile.core.data.session.SignOutHook
@@ -18,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.Module
 import org.koin.core.qualifier.named
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 /** Platform bindings: `KVault`, `DataStore<Preferences>`, `FinanceDatabase`, `NetworkMonitor`. */
@@ -55,6 +58,14 @@ val dataModule: Module =
                 scope = get(AppScope),
             )
         }
+        single {
+            PushRegistrar(
+                client = get(),
+                sessionState = get<SessionManager>().state,
+                tokens = PushBridge.token,
+                scope = get(AppScope),
+            )
+        } bind SignOutHook::class
         single { ProfileRepository(get(), get()) }
         single { WalletRepository(get(), get()) }
         single { CategoryRepository(get(), get()) }

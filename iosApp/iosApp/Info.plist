@@ -10,6 +10,21 @@
 	<string>Chọn ảnh hóa đơn để đính kèm vào giao dịch.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Dùng Face ID để mở khóa ứng dụng.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.financemanage.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>financemanage</string>
+			</array>
+		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Allows http://localhost:8080 for the local backend; production uses HTTPS only. -->

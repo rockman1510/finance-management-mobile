@@ -8,6 +8,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Firebase (push, F20) is configured only when google-services.json is present (never committed, see docs/RELEASE.md).
+// Without it the app builds and runs; push is simply unavailable.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -53,6 +59,7 @@ kotlin {
             implementation(projects.feature.loan)
             implementation(projects.feature.investment)
             implementation(projects.feature.report)
+            implementation(projects.feature.notification)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -77,6 +84,8 @@ kotlin {
             implementation(libs.androidx.fragment)
             implementation(libs.koin.android)
             implementation(libs.kotlinx.coroutines.android)
+            implementation(project.dependencies.platform(libs.firebase.bom))
+            implementation(libs.firebase.messaging)
         }
         commonTest.dependencies {
             implementation(projects.core.testing)

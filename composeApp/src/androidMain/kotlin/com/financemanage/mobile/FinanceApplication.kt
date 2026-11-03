@@ -2,6 +2,7 @@ package com.financemanage.mobile
 
 import android.app.Application
 import com.financemanage.mobile.di.initKoin
+import com.financemanage.mobile.push.Push
 import org.koin.android.ext.koin.androidContext
 
 class FinanceApplication : Application() {
@@ -10,5 +11,6 @@ class FinanceApplication : Application() {
         initKoin(platformApiConfig()) {
             androidContext(this@FinanceApplication)
         }
+        Push.init(this)
     }
 }
