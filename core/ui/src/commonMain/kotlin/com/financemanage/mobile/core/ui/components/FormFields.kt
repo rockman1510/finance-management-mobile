@@ -138,7 +138,8 @@ fun AmountTextField(
 }
 
 /**
- * Parses what the user typed in an amount field: `1.250.000` (vi grouping), `1250000`, `12,5`, `12.50`.
+ * Parses what the user typed in an amount field: `1.250.000` (vi grouping), `1250000`, `12,5`, `12.50`,
+ * `2.000` (two thousand in USD).
  * Returns `null` when it is not a number.
  */
 fun parseAmountInput(
@@ -147,18 +148,16 @@ fun parseAmountInput(
 ): BigDecimal? {
     val trimmed = text.trim()
     if (trimmed.isEmpty()) return null
+    // The last separator is the decimal one, unless more digits follow it than the currency has decimals
+    // ("2.000" in USD is two thousand: vi-VN groups with '.'). The others are grouping.
+    val lastSeparator = maxOf(trimmed.lastIndexOf('.'), trimmed.lastIndexOf(','))
+    val decimalsTyped = trimmed.length - lastSeparator - 1
     val normalized =
-        if (fractionDigits == 0) {
+        if (lastSeparator < 0 || decimalsTyped > fractionDigits) {
             trimmed.replace(".", "").replace(",", "")
         } else {
-            // Last separator is the decimal one; others are grouping.
-            val lastSeparator = maxOf(trimmed.lastIndexOf('.'), trimmed.lastIndexOf(','))
-            if (lastSeparator < 0) {
-                trimmed
-            } else {
-                trimmed.substring(0, lastSeparator).replace(".", "").replace(",", "") + "." +
-                    trimmed.substring(lastSeparator + 1)
-            }
+            trimmed.substring(0, lastSeparator).replace(".", "").replace(",", "") + "." +
+                trimmed.substring(lastSeparator + 1)
         }
     return normalized.toBigDecimalOrNull()?.takeIf { it.hasAtMostFractionDigits(fractionDigits) }
 }

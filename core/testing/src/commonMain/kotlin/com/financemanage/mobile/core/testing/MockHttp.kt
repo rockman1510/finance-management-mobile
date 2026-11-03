@@ -12,7 +12,14 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 const val TEST_BASE_URL = "http://localhost:8080"
 
@@ -45,3 +52,22 @@ fun MockRequestHandleScope.respondError(
     message: String = code,
 ): HttpResponseData =
     respondJson("""{"code":"$code","message":"$message","timestamp":"2026-11-01T10:15:07Z"}""", status)
+
+/** The JSON (or text) body the app sent. */
+fun HttpRequestData.bodyText(): String =
+    when (val content = body) {
+        is TextContent -> content.text
+        is OutgoingContent.ByteArrayContent -> content.bytes().decodeToString()
+        else -> ""
+    }
+
+/** `/api/v1/...` path of the request without the prefix, e.g. `wallets/123`. */
+val HttpRequestData.apiPath: String
+    get() = url.encodedPath.removePrefix("/api/v1/")
+
+/** The JSON body the app sent, as an object. */
+fun HttpRequestData.bodyJson(): JsonObject = Json.parseToJsonElement(bodyText()).jsonObject
+
+/** A top-level field of the JSON body as text (`null` when absent or JSON null): numbers keep their exact form. */
+fun HttpRequestData.bodyField(name: String): String? =
+    (bodyJson()[name] as? JsonPrimitive)?.takeUnless { it.toString() == "null" }?.jsonPrimitive?.content
