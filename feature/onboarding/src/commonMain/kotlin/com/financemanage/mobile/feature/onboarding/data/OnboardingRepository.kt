@@ -27,9 +27,9 @@ private data class CreateMonthlyBudgetRequest(
     val name: String,
     @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
     val currency: String,
-    val categoryIds: List<String> = emptyList(),
-    val period: String = "MONTHLY",
-    val repeat: Boolean = true,
+    // No default values: NetworkJson does not encode defaults, and `period` is required (API §7).
+    val period: String,
+    val repeat: Boolean,
 )
 
 /** Everything onboarding needs; it only uses shared repositories plus one budget call. */
@@ -71,7 +71,15 @@ class OnboardingRepository(
         apiCall {
             client.post(api("budgets")) {
                 contentType(ContentType.Application.Json)
-                setBody(CreateMonthlyBudgetRequest(name, amount.rounded().amount, amount.currency.value))
+                setBody(
+                    CreateMonthlyBudgetRequest(
+                        name = name,
+                        amount = amount.rounded().amount,
+                        currency = amount.currency.value,
+                        period = "MONTHLY",
+                        repeat = true,
+                    ),
+                )
             }
             Unit
         }

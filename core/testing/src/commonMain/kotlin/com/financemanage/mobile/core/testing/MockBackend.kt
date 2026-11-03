@@ -18,8 +18,8 @@ typealias MockResponder = suspend MockRequestHandleScope.(HttpRequestData) -> Ht
  * an answer half-way. Unknown routes answer `404 NOT_FOUND`.
  */
 class MockBackend(
-    tokenStore: FakeTokenStore = FakeTokenStore(),
-    sessionEvents: SessionEvents = SessionEvents(),
+    val tokenStore: FakeTokenStore = FakeTokenStore(),
+    val sessionEvents: SessionEvents = SessionEvents(),
 ) {
     private class Route(
         val method: HttpMethod,

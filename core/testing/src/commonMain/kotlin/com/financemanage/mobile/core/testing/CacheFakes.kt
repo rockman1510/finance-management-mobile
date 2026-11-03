@@ -6,7 +6,10 @@ import com.financemanage.mobile.core.data.cache.JsonCacheEntity
 import com.financemanage.mobile.core.data.outbox.OutboxDao
 import com.financemanage.mobile.core.data.outbox.OutboxEntity
 import com.financemanage.mobile.core.data.outbox.OutboxStatus
+import com.financemanage.mobile.core.data.session.SessionManager
+import com.financemanage.mobile.core.data.settings.AppSettingsRepository
 import com.financemanage.mobile.core.network.NetworkJson
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -100,3 +103,23 @@ suspend fun awaitCondition(
 
 private const val AWAIT_TIMEOUT_MS = 5_000L
 private const val AWAIT_STEP_MS = 5L
+
+/** A real [SessionManager] over fakes, for features that sign in or out. */
+fun testSessionManager(
+    backend: MockBackend,
+    scope: CoroutineScope,
+    tokenStore: FakeTokenStore = backend.tokenStore,
+    cache: JsonCache = testJsonCache(),
+    outbox: FakeOutboxDao = FakeOutboxDao(),
+    settings: AppSettingsRepository = AppSettingsRepository(InMemoryPreferencesDataStore()),
+): SessionManager =
+    SessionManager(
+        tokenStore = tokenStore,
+        httpClient = backend.client,
+        cache = cache,
+        outboxDao = outbox,
+        settings = settings,
+        hooks = { emptyList() },
+        sessionEvents = backend.sessionEvents,
+        scope = scope,
+    )

@@ -6,7 +6,9 @@ import com.financemanage.mobile.core.network.auth.TokenStore
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.auth.Auth
+import io.ktor.client.plugins.auth.AuthCircuitBreaker
 import io.ktor.client.plugins.auth.authProvider
 import io.ktor.client.plugins.auth.providers.BearerAuthProvider
 import io.ktor.client.plugins.auth.providers.BearerTokens
@@ -58,6 +60,10 @@ fun createHttpClient(
             connectTimeoutMillis = CONNECT_TIMEOUT_MS
         }
 
+        // Ktor's Auth plugin re-sends a request that got a 401 without a token. For /auth/* a 401 means wrong
+        // credentials or code: sending it again would count twice towards the lock-out (API §4.1).
+        install(AuthEndpointsNoRetry)
+
         install(Auth) {
             bearer {
                 loadTokens {
@@ -88,6 +94,13 @@ fun createHttpClient(
 }
 
 private fun String.isAuthEndpoint(): Boolean = contains("${API_PREFIX}auth/")
+
+private val AuthEndpointsNoRetry =
+    createClientPlugin("AuthEndpointsNoRetry") {
+        onRequest { request, _ ->
+            if (request.url.encodedPath.isAuthEndpoint()) request.attributes.put(AuthCircuitBreaker, Unit)
+        }
+    }
 
 /**
  * Drops the bearer tokens cached in memory by Ktor. Call after signing in (new tokens saved in the

@@ -128,9 +128,11 @@ class AuthRefreshTest {
         runTest {
             val store = InMemoryTokenStore(AuthTokens("access-1", "refresh-1"))
             var refreshCount = 0
+            var loginCount = 0
             val client =
                 testClient(store) { request ->
                     if (request.url.encodedPath.endsWith("auth/refresh")) refreshCount++
+                    if (request.url.encodedPath.endsWith("auth/login")) loginCount++
                     respondJson(
                         """{"code":"INVALID_CREDENTIALS","message":"Invalid credentials"}""",
                         HttpStatusCode.Unauthorized,
@@ -142,6 +144,7 @@ class AuthRefreshTest {
             val error = assertIs<AppError.Api>(assertIs<AppResult.Failure>(result).error)
             assertEquals("INVALID_CREDENTIALS", error.code)
             assertEquals(0, refreshCount)
+            assertEquals(1, loginCount, "a wrong password must not be sent twice (it counts towards the lock-out)")
             assertEquals(0, store.clearCount)
             assertTrue(store.tokens != null)
         }

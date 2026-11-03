@@ -498,7 +498,7 @@ class DeleteAccountViewModel(
 
     fun delete() {
         val current = mutableState.value
-        if (current.loading) return
+        if (current.loading || !canDelete) return
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val result = repository.deleteAccount(current.password, current.confirmEmail)) {
