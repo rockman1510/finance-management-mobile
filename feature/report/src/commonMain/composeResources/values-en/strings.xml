@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reports">Reports</string>
+    <string name="this_month">This month</string>
+    <string name="last_month">Last month</string>
+    <string name="this_quarter">This quarter</string>
+    <string name="this_year">This year</string>
+    <string name="custom">Custom</string>
+    <string name="from_date">From</string>
+    <string name="to_date">To</string>
+    <string name="report_currency">Report currency</string>
+    <string name="overview">Overview</string>
+    <string name="income">Income</string>
+    <string name="expense">Expense</string>
+    <string name="net">Net</string>
+    <string name="savings_rate">Savings rate</string>
+    <string name="vs_previous">%1$s vs previous period</string>
+    <string name="by_category">By category</string>
+    <string name="cash_flow">Cash flow</string>
+    <string name="external">Savings/investments</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="exported">CSV file saved</string>
+    <string name="net_worth">Net worth</string>
+    <string name="assets">Assets</string>
+    <string name="liabilities">Liabilities</string>
+    <string name="group_WALLET">Wallets</string>
+    <string name="group_SAVING">Savings</string>
+    <string name="group_INVESTMENT">Investments</string>
+    <string name="group_DEPOSIT">Deposits</string>
+    <string name="group_LENT">Lent</string>
+    <string name="group_BORROWED">Borrowed</string>
+    <string name="dashboard">Deposits &amp; loans</string>
+    <string name="active_deposits">Active deposits: %1$d</string>
+    <string name="active_loans">Active loans: %1$d</string>
+    <string name="overdue_installments">Overdue installments: %1$d</string>
+    <string name="upcoming_30">Due in the next 30 days</string>
+    <string name="cash_flow_12">Expected cash flow, 12 months</string>
+    <string name="no_data">No data for this period</string>
+    <string name="error_period">Invalid period</string>
+    <string name="error_period_too_long">The period is too long (10 years max)</string>
+</resources>

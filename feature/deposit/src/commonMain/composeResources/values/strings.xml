@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="deposits">Tiền gửi</string>
+    <string name="add_deposit">Mở sổ tiết kiệm</string>
+    <string name="no_deposits">Chưa có khoản tiền gửi</string>
+    <string name="no_deposits_message">Theo dõi sổ tiết kiệm ngân hàng, lãi và ngày đáo hạn.</string>
+    <string name="status_ACTIVE">Đang gửi</string>
+    <string name="status_MATURED">Đã đáo hạn</string>
+    <string name="status_SETTLED">Đã tất toán</string>
+    <string name="institution">Ngân hàng</string>
+    <string name="account_number">Số tài khoản / số sổ</string>
+    <string name="type">Loại</string>
+    <string name="type_TERM">Có kỳ hạn</string>
+    <string name="type_DEMAND">Không kỳ hạn</string>
+    <string name="principal">Tiền gốc</string>
+    <string name="annual_rate">Lãi suất (%/năm)</string>
+    <string name="early_rate">Lãi suất rút trước hạn (%/năm)</string>
+    <string name="term_months">Kỳ hạn (tháng)</string>
+    <string name="open_date">Ngày mở</string>
+    <string name="interest_payment">Trả lãi</string>
+    <string name="pay_AT_MATURITY">Cuối kỳ</string>
+    <string name="pay_MONTHLY">Hằng tháng</string>
+    <string name="pay_UPFRONT">Trả trước</string>
+    <string name="rollover">Khi đáo hạn</string>
+    <string name="roll_NONE">Không tái tục</string>
+    <string name="roll_PRINCIPAL_ONLY">Tái tục gốc</string>
+    <string name="roll_PRINCIPAL_AND_INTEREST">Tái tục gốc và lãi</string>
+    <string name="calc_method">Cách tính lãi</string>
+    <string name="calc_SIMPLE_ACTUAL_365">Lãi đơn (ngày thực/365)</string>
+    <string name="calc_SIMPLE_30_360">Lãi đơn (30/360)</string>
+    <string name="calc_COMPOUND_MONTHLY">Lãi kép hằng tháng</string>
+    <string name="from_wallet">Lấy tiền từ ví (không bắt buộc)</string>
+    <string name="to_wallet">Nhận tiền vào ví (không bắt buộc)</string>
+    <string name="no_wallet">Chỉ theo dõi</string>
+    <string name="preview">Dự kiến</string>
+    <string name="maturity_date">Ngày đáo hạn</string>
+    <string name="expected_interest">Tiền lãi dự kiến</string>
+    <string name="total_at_maturity">Tổng nhận khi đáo hạn</string>
+    <string name="accrued_interest">Lãi tính đến hôm nay</string>
+    <string name="history">Lịch sử</string>
+    <string name="tx_OPEN">Mở sổ</string>
+    <string name="tx_ROLLOVER">Tái tục</string>
+    <string name="tx_INTEREST_PAID">Trả lãi</string>
+    <string name="tx_SETTLE">Tất toán</string>
+    <string name="funding">Trích tiền từ ví</string>
+    <string name="payout">Trả tiền về ví</string>
+    <string name="settle">Tất toán</string>
+    <string name="settle_date">Ngày tất toán</string>
+    <string name="quote_total">Gốc %1$s + lãi %2$s = %3$s</string>
+    <string name="early_warning">Rút trước hạn: bạn mất %1$s tiền lãi.</string>
+    <string name="delete_deposit">Xóa khoản tiền gửi</string>
+    <string name="error_already_settled">Khoản tiền gửi đã được tất toán.</string>
+    <string name="error_settlement_date">Ngày tất toán không hợp lệ.</string>
+    <string name="error_term">Kỳ hạn không hợp lệ.</string>
+    <string name="error_rate">Lãi suất không hợp lệ.</string>
+</resources>

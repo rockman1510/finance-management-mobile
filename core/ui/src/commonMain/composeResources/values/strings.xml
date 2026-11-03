@@ -89,4 +89,5 @@
     <string name="app_locked">Ứng dụng đang khóa</string>
     <string name="unlock">Mở khóa</string>
     <string name="unlock_reason">Mở khóa Finance Manage</string>
+    <string name="assets_reports">Báo cáo</string>
 </resources>

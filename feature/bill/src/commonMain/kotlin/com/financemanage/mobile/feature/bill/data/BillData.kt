@@ -250,7 +250,7 @@ class BillRepository(
             Unit
         }.onSuccess { refresh() }
 
-    private fun HttpRequestBuilder.json(body: Any) {
+    private inline fun <reified T> HttpRequestBuilder.json(body: T) {
         contentType(ContentType.Application.Json)
         setBody(body)
     }

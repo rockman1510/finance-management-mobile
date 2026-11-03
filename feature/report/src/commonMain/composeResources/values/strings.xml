@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reports">Báo cáo</string>
+    <string name="this_month">Tháng này</string>
+    <string name="last_month">Tháng trước</string>
+    <string name="this_quarter">Quý này</string>
+    <string name="this_year">Năm nay</string>
+    <string name="custom">Tùy chọn</string>
+    <string name="from_date">Từ ngày</string>
+    <string name="to_date">Đến ngày</string>
+    <string name="report_currency">Loại tiền báo cáo</string>
+    <string name="overview">Tổng quan</string>
+    <string name="income">Thu nhập</string>
+    <string name="expense">Chi tiêu</string>
+    <string name="net">Chênh lệch</string>
+    <string name="savings_rate">Tỷ lệ tiết kiệm</string>
+    <string name="vs_previous">%1$s so với kỳ trước</string>
+    <string name="by_category">Theo danh mục</string>
+    <string name="cash_flow">Dòng tiền</string>
+    <string name="external">Tiết kiệm/đầu tư</string>
+    <string name="export_csv">Xuất CSV</string>
+    <string name="exported">Đã lưu tệp CSV</string>
+    <string name="net_worth">Tài sản ròng</string>
+    <string name="assets">Tài sản</string>
+    <string name="liabilities">Nợ phải trả</string>
+    <string name="group_WALLET">Ví</string>
+    <string name="group_SAVING">Tiết kiệm</string>
+    <string name="group_INVESTMENT">Đầu tư</string>
+    <string name="group_DEPOSIT">Tiền gửi</string>
+    <string name="group_LENT">Cho vay</string>
+    <string name="group_BORROWED">Đi vay</string>
+    <string name="dashboard">Tiền gửi &amp; khoản vay</string>
+    <string name="active_deposits">Khoản tiền gửi đang hoạt động: %1$d</string>
+    <string name="active_loans">Khoản vay đang hoạt động: %1$d</string>
+    <string name="overdue_installments">Kỳ trả nợ quá hạn: %1$d</string>
+    <string name="upcoming_30">Sắp đến trong 30 ngày</string>
+    <string name="cash_flow_12">Dòng tiền dự kiến 12 tháng</string>
+    <string name="no_data">Chưa có dữ liệu cho kỳ này</string>
+    <string name="error_period">Khoảng thời gian không hợp lệ</string>
+    <string name="error_period_too_long">Khoảng thời gian quá dài (tối đa 10 năm)</string>
+</resources>

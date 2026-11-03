@@ -49,6 +49,10 @@ kotlin {
             implementation(projects.feature.bill)
             implementation(projects.feature.saving)
             implementation(projects.feature.home)
+            implementation(projects.feature.deposit)
+            implementation(projects.feature.loan)
+            implementation(projects.feature.investment)
+            implementation(projects.feature.report)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)

@@ -124,7 +124,7 @@ class SecurityRepository(
                 }.ignore()
         }
 
-    private fun io.ktor.client.request.HttpRequestBuilder.json(body: Any) {
+    private inline fun <reified T> io.ktor.client.request.HttpRequestBuilder.json(body: T) {
         contentType(ContentType.Application.Json)
         setBody(body)
     }

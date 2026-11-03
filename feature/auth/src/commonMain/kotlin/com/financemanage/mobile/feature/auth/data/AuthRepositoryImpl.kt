@@ -77,9 +77,9 @@ internal class AuthRepositoryImpl(
             Unit
         }
 
-    private suspend fun post(
+    private suspend inline fun <reified T> post(
         path: String,
-        body: Any,
+        body: T,
     ) = client.post(api(path)) {
         contentType(ContentType.Application.Json)
         setBody(body)

@@ -29,7 +29,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.builtins.ListSerializer
 
-internal fun io.ktor.client.request.HttpRequestBuilder.json(body: Any) {
+internal inline fun <reified T> io.ktor.client.request.HttpRequestBuilder.json(body: T) {
     contentType(ContentType.Application.Json)
     setBody(body)
 }

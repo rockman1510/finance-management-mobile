@@ -205,7 +205,7 @@ class SavingRepository(
             client.delete(api("saving-goals/$id/round-up")).body<GoalDto>()
         }
 
-    private fun HttpRequestBuilder.json(body: Any) {
+    private inline fun <reified T> HttpRequestBuilder.json(body: T) {
         contentType(ContentType.Application.Json)
         setBody(body)
     }

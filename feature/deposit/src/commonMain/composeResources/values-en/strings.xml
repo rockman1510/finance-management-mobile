@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="deposits">Deposits</string>
+    <string name="add_deposit">Open a deposit</string>
+    <string name="no_deposits">No deposits yet</string>
+    <string name="no_deposits_message">Track bank deposits, interest and maturity dates.</string>
+    <string name="status_ACTIVE">Active</string>
+    <string name="status_MATURED">Matured</string>
+    <string name="status_SETTLED">Settled</string>
+    <string name="institution">Bank</string>
+    <string name="account_number">Account number</string>
+    <string name="type">Type</string>
+    <string name="type_TERM">Term</string>
+    <string name="type_DEMAND">Demand</string>
+    <string name="principal">Principal</string>
+    <string name="annual_rate">Annual rate (%)</string>
+    <string name="early_rate">Early withdrawal rate (%)</string>
+    <string name="term_months">Term (months)</string>
+    <string name="open_date">Open date</string>
+    <string name="interest_payment">Interest payment</string>
+    <string name="pay_AT_MATURITY">At maturity</string>
+    <string name="pay_MONTHLY">Monthly</string>
+    <string name="pay_UPFRONT">Upfront</string>
+    <string name="rollover">At maturity</string>
+    <string name="roll_NONE">No rollover</string>
+    <string name="roll_PRINCIPAL_ONLY">Roll over principal</string>
+    <string name="roll_PRINCIPAL_AND_INTEREST">Roll over principal and interest</string>
+    <string name="calc_method">Calculation method</string>
+    <string name="calc_SIMPLE_ACTUAL_365">Simple (actual/365)</string>
+    <string name="calc_SIMPLE_30_360">Simple (30/360)</string>
+    <string name="calc_COMPOUND_MONTHLY">Compound monthly</string>
+    <string name="from_wallet">Take the money from a wallet (optional)</string>
+    <string name="to_wallet">Pay into a wallet (optional)</string>
+    <string name="no_wallet">Track only</string>
+    <string name="preview">Preview</string>
+    <string name="maturity_date">Maturity date</string>
+    <string name="expected_interest">Expected interest</string>
+    <string name="total_at_maturity">Total at maturity</string>
+    <string name="accrued_interest">Interest accrued today</string>
+    <string name="history">History</string>
+    <string name="tx_OPEN">Opened</string>
+    <string name="tx_ROLLOVER">Rolled over</string>
+    <string name="tx_INTEREST_PAID">Interest paid</string>
+    <string name="tx_SETTLE">Settled</string>
+    <string name="funding">Wallet funding</string>
+    <string name="payout">Wallet payout</string>
+    <string name="settle">Settle</string>
+    <string name="settle_date">Settlement date</string>
+    <string name="quote_total">Principal %1$s + interest %2$s = %3$s</string>
+    <string name="early_warning">Early withdrawal: you lose %1$s of interest.</string>
+    <string name="delete_deposit">Delete deposit</string>
+    <string name="error_already_settled">The deposit is already settled.</string>
+    <string name="error_settlement_date">Invalid settlement date.</string>
+    <string name="error_term">Invalid term.</string>
+    <string name="error_rate">Invalid rate.</string>
+</resources>

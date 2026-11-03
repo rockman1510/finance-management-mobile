@@ -22,8 +22,12 @@ import com.financemanage.mobile.feature.bill.presentation.billGraph
 import com.financemanage.mobile.feature.budget.presentation.budgetGraph
 import com.financemanage.mobile.feature.category.presentation.categoryGraph
 import com.financemanage.mobile.feature.currency.presentation.currencyGraph
+import com.financemanage.mobile.feature.deposit.presentation.depositGraph
 import com.financemanage.mobile.feature.home.presentation.HomeDestination
 import com.financemanage.mobile.feature.home.presentation.HomeScreen
+import com.financemanage.mobile.feature.investment.presentation.investmentGraph
+import com.financemanage.mobile.feature.loan.presentation.loanGraph
+import com.financemanage.mobile.feature.report.presentation.reportGraph
 import com.financemanage.mobile.feature.saving.presentation.savingGraph
 import com.financemanage.mobile.feature.settings.presentation.settingsGraph
 import com.financemanage.mobile.feature.transaction.presentation.transactionGraph
@@ -55,7 +59,7 @@ fun NavGraphBuilder.appGraph(navController: NavHostController) {
     composable<PlanRoute> { entry ->
         PlanScreen(initialTab = entry.toRoute<PlanRoute>().tab, navController = navController)
     }
-    composable<AssetsRoute> { AssetsScreen() }
+    composable<AssetsRoute> { AssetsScreen(onNavigate = { navController.navigate(it) }) }
 
     settingsGraph(navController)
     walletGraph(navController)
@@ -65,11 +69,14 @@ fun NavGraphBuilder.appGraph(navController: NavHostController) {
     budgetGraph(navController)
     billGraph(navController)
     savingGraph(navController)
+    depositGraph(navController)
+    loanGraph(navController)
+    investmentGraph(navController)
+    reportGraph(navController)
 
     // Destinations of features not implemented yet.
     comingSoon<NotificationSettingsRoute>(navController)
     comingSoon<NotificationsRoute>(navController)
-    comingSoon<ReportsRoute>(navController)
 }
 
 private inline fun <reified T : Any> NavGraphBuilder.comingSoon(navController: NavHostController) {
