@@ -3,8 +3,8 @@ package com.financemanage.mobile.feature.transaction.presentation
 import androidx.compose.runtime.Composable
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.model.domain.TransactionType
-import com.financemanage.mobile.feature.transaction.domain.Transaction
-import com.financemanage.mobile.feature.transaction.domain.TransactionSource
+import com.financemanage.mobile.feature.transaction.domain.model.Transaction
+import com.financemanage.mobile.feature.transaction.domain.model.TransactionSource
 import com.financemanage.mobile.feature.transaction.resources.Res
 import com.financemanage.mobile.feature.transaction.resources.error_attachment_count
 import com.financemanage.mobile.feature.transaction.resources.error_attachment_size

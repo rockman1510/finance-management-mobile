@@ -5,9 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.financemanage.mobile.core.data.push.NotificationLink
-import com.financemanage.mobile.core.data.push.PushBridge
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
+import com.financemanage.mobile.core.domain.model.NotificationLink
 import com.financemanage.mobile.core.navigation.BillDetailRoute
 import com.financemanage.mobile.core.navigation.BudgetDetailRoute
 import com.financemanage.mobile.core.navigation.DepositDetailRoute
@@ -16,8 +14,7 @@ import com.financemanage.mobile.core.navigation.LoanDetailRoute
 import com.financemanage.mobile.core.navigation.NotificationsRoute
 import com.financemanage.mobile.core.navigation.QuickAddRoute
 import com.financemanage.mobile.core.ui.platform.rememberNotificationPermissionController
-import kotlinx.coroutines.flow.first
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Screen a notification points to (`referenceType` + `referenceId`, API §14). */
 fun routeFor(link: NotificationLink): Any {
@@ -42,23 +39,21 @@ fun routeFor(link: NotificationLink): Any {
  * permission once, when a feature requests it (after the first budget or bill).
  */
 @Composable
-fun PushEffects(navController: NavController) {
-    val opened by PushBridge.opened.collectAsStateWithLifecycle()
+fun PushEffects(
+    navController: NavController,
+    viewModel: PushViewModel = koinViewModel(),
+) {
+    val opened by viewModel.opened.collectAsStateWithLifecycle()
     LaunchedEffect(opened) {
         val link = opened ?: return@LaunchedEffect
-        PushBridge.consumeOpened(link)
+        viewModel.consume(link)
         navController.navigate(routeFor(link))
     }
 
-    val settings = koinInject<AppSettingsRepository>()
     val permission = rememberNotificationPermissionController()
     LaunchedEffect(Unit) {
-        PushBridge.permissionRequests.collect {
-            val asked = settings.preferences.first().notificationPermissionAsked
-            if (!asked && !permission.enabled) {
-                settings.setNotificationPermissionAsked()
-                permission.request()
-            }
+        viewModel.permissionRequests.collect {
+            if (viewModel.shouldAskPermission(alreadyGranted = permission.enabled)) permission.request()
         }
     }
 }

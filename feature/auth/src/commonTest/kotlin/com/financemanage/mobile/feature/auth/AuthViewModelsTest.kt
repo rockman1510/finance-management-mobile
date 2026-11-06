@@ -1,6 +1,6 @@
 package com.financemanage.mobile.feature.auth
 
-import com.financemanage.mobile.core.data.session.SessionState
+import com.financemanage.mobile.core.domain.model.SessionState
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.ErrorCodes
 import com.financemanage.mobile.core.network.auth.AuthTokens
@@ -11,7 +11,13 @@ import com.financemanage.mobile.core.testing.bodyField
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testSessionManager
 import com.financemanage.mobile.feature.auth.data.AuthRepositoryImpl
-import com.financemanage.mobile.feature.auth.domain.AuthRules
+import com.financemanage.mobile.feature.auth.domain.model.AuthRules
+import com.financemanage.mobile.feature.auth.domain.usecase.RequestPasswordResetUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.ResetPasswordUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.SignInUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.SignInWithGoogleUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.SignUpUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.VerifyTwoFactorUseCase
 import com.financemanage.mobile.feature.auth.presentation.FieldProblem
 import com.financemanage.mobile.feature.auth.presentation.ForgotPasswordViewModel
 import com.financemanage.mobile.feature.auth.presentation.SignInEvent
@@ -35,6 +41,11 @@ class AuthViewModelsTest {
     private fun TestScope.repository() =
         AuthRepositoryImpl(backend.client, testSessionManager(backend, backgroundScope))
 
+    private fun TestScope.signInViewModel(): SignInViewModel {
+        val repository = repository()
+        return SignInViewModel(SignInUseCase(repository), SignInWithGoogleUseCase(repository))
+    }
+
     @Test
     fun rulesMatchTheApi() {
         assertTrue(AuthRules.isEmailValid(" an@example.com "))
@@ -50,7 +61,7 @@ class AuthViewModelsTest {
     fun signInValidatesThenStoresTheTokens() =
         runViewModelTest {
             backend.post("auth/login", SampleJson.TOKEN_PAIR)
-            val viewModel = SignInViewModel(repository())
+            val viewModel = signInViewModel()
 
             viewModel.onEmailChange("an@")
             viewModel.signIn()
@@ -77,7 +88,7 @@ class AuthViewModelsTest {
     fun signInWithTwoFactorEmitsTheChallenge() =
         runViewModelTest {
             backend.post("auth/login", SampleJson.LOGIN_TWO_FACTOR_REQUIRED)
-            val viewModel = SignInViewModel(repository())
+            val viewModel = signInViewModel()
             viewModel.onEmailChange("an@example.com")
             viewModel.onPasswordChange("Secret123")
             viewModel.signIn()
@@ -90,7 +101,7 @@ class AuthViewModelsTest {
     fun wrongPasswordAndCancelledGoogleAreReported() =
         runViewModelTest {
             backend.fail(HttpMethod.Post, "auth/login", HttpStatusCode.Unauthorized, ErrorCodes.INVALID_CREDENTIALS)
-            val viewModel = SignInViewModel(repository())
+            val viewModel = signInViewModel()
             viewModel.onEmailChange("an@example.com")
             viewModel.onPasswordChange("wrong")
             viewModel.signIn()
@@ -105,7 +116,7 @@ class AuthViewModelsTest {
     fun googleSignInSendsTheIdToken() =
         runViewModelTest {
             backend.post("auth/google", SampleJson.TOKEN_PAIR)
-            val viewModel = SignInViewModel(repository())
+            val viewModel = signInViewModel()
             viewModel.signInWithGoogle("google-id-token")
             viewModel.state.awaitValue { !it.loading && backend.tokenStore.tokens.value != null }
             assertEquals("google-id-token", backend.single(HttpMethod.Post, "auth/google").bodyField("idToken"))
@@ -116,7 +127,7 @@ class AuthViewModelsTest {
         runViewModelTest {
             backend.post("auth/register", SampleJson.TOKEN_PAIR, HttpStatusCode.Created)
             val session = testSessionManager(backend, backgroundScope)
-            val viewModel = SignUpViewModel(AuthRepositoryImpl(backend.client, session))
+            val viewModel = SignUpViewModel(SignUpUseCase(AuthRepositoryImpl(backend.client, session)))
 
             viewModel.onPasswordChange("short")
             viewModel.signUp()
@@ -139,7 +150,13 @@ class AuthViewModelsTest {
         runViewModelTest {
             backend.fail(HttpMethod.Post, "auth/2fa/verify", HttpStatusCode.Unauthorized, ErrorCodes.INVALID_CODE)
             // A long expiry: waiting for the answer may move the virtual clock.
-            val viewModel = TwoFactorViewModel(repository(), "challenge-1", expiresInSeconds = 365L * 24 * 3600)
+            val viewModel =
+                TwoFactorViewModel(
+                    VerifyTwoFactorUseCase(repository()),
+                    "challenge-1",
+                    expiresInSeconds =
+                        365L * 24 * 3600,
+                )
 
             viewModel.verify()
             assertTrue(backend.requests.isEmpty())
@@ -160,7 +177,8 @@ class AuthViewModelsTest {
     @Test
     fun anExpiredChallengeCannotBeVerified() =
         runViewModelTest {
-            val viewModel = TwoFactorViewModel(repository(), "challenge-1", expiresInSeconds = 300)
+            val viewModel =
+                TwoFactorViewModel(VerifyTwoFactorUseCase(repository()), "challenge-1", expiresInSeconds = 300)
             advanceTimeBy(299_000)
             assertFalse(viewModel.state.value.expired)
             advanceTimeBy(2_000)
@@ -175,7 +193,8 @@ class AuthViewModelsTest {
     fun twoFactorSuccessSignsIn() =
         runViewModelTest {
             backend.post("auth/2fa/verify", SampleJson.TOKEN_PAIR)
-            val viewModel = TwoFactorViewModel(repository(), "challenge-1", expiresInSeconds = 300)
+            val viewModel =
+                TwoFactorViewModel(VerifyTwoFactorUseCase(repository()), "challenge-1", expiresInSeconds = 300)
             viewModel.onCodeChange("123456")
             viewModel.verify()
             viewModel.state.awaitValue { !it.loading && backend.tokenStore.tokens.value != null }
@@ -190,7 +209,8 @@ class AuthViewModelsTest {
         runViewModelTest {
             backend.post("auth/forgot-password", "", HttpStatusCode.Accepted)
             backend.post("auth/reset-password", "", HttpStatusCode.NoContent)
-            val viewModel = ForgotPasswordViewModel(repository())
+            val viewModel =
+                ForgotPasswordViewModel(RequestPasswordResetUseCase(repository()), ResetPasswordUseCase(repository()))
 
             viewModel.onEmailChange("bad")
             viewModel.sendCode()

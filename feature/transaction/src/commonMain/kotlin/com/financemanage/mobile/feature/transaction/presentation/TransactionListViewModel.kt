@@ -2,17 +2,22 @@ package com.financemanage.mobile.feature.transaction.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.outbox.OutboxEntity
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.model.PendingWrite
+import com.financemanage.mobile.core.domain.usecase.DiscardPendingWriteUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePendingWritesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.RetryPendingWriteUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.feature.transaction.data.TransactionRepository
-import com.financemanage.mobile.feature.transaction.domain.Transaction
-import com.financemanage.mobile.feature.transaction.domain.TransactionFilter
-import com.financemanage.mobile.feature.transaction.domain.TransactionTotals
+import com.financemanage.mobile.feature.transaction.domain.model.Transaction
+import com.financemanage.mobile.feature.transaction.domain.model.TransactionFilter
+import com.financemanage.mobile.feature.transaction.domain.model.TransactionTotals
+import com.financemanage.mobile.feature.transaction.domain.usecase.TransactionListUseCases
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,16 +46,21 @@ data class TransactionListUiState(
     val content: TransactionListContent = TransactionListContent(),
     val wallets: List<Wallet> = emptyList(),
     val categories: List<Category> = emptyList(),
-    val pending: List<OutboxEntity> = emptyList(),
+    val pending: List<PendingWrite> = emptyList(),
     val actionError: AppError? = null,
 )
 
 /** Transactions tab (F07): filters, totals, paged list newest first, pending offline writes on top. */
 class TransactionListViewModel(
     initialFilter: TransactionFilter,
-    private val repository: TransactionRepository,
-    wallets: WalletRepository,
-    categories: CategoryRepository,
+    private val transactions: TransactionListUseCases,
+    observeWallets: ObserveWalletsUseCase,
+    observeCategories: ObserveCategoriesUseCase,
+    getWallets: GetWalletsUseCase,
+    getCategories: GetCategoriesUseCase,
+    observePendingWrites: ObservePendingWritesUseCase,
+    private val retryPendingWrite: RetryPendingWriteUseCase,
+    private val discardPendingWrite: DiscardPendingWriteUseCase,
 ) : ViewModel() {
     private val filter = MutableStateFlow(initialFilter)
     private val content = MutableStateFlow(TransactionListContent())
@@ -61,9 +71,9 @@ class TransactionListViewModel(
         combine(
             filter,
             content,
-            wallets.wallets.map { it?.value.orEmpty() },
-            categories.categories.map { it?.value.orEmpty() },
-            combine(repository.pendingWrites, actionError) { pending, error -> pending to error },
+            observeWallets().map { it?.value.orEmpty() },
+            observeCategories().map { it?.value.orEmpty() },
+            combine(observePendingWrites(), actionError) { pending, error -> pending to error },
         ) { currentFilter, currentContent, walletList, categoryList, (pending, error) ->
             TransactionListUiState(currentFilter, currentContent, walletList, categoryList, pending, error)
         }.stateIn(
@@ -74,8 +84,8 @@ class TransactionListViewModel(
 
     init {
         // Shared data used for labels; refreshed in the background.
-        viewModelScope.launch { if (wallets.wallets.first() == null) wallets.refresh() }
-        viewModelScope.launch { if (categories.categories.first() == null) categories.refresh() }
+        viewModelScope.launch { getWallets() }
+        viewModelScope.launch { getCategories() }
     }
 
     fun refresh() = load(reset = true)
@@ -94,7 +104,7 @@ class TransactionListViewModel(
 
     fun delete(transaction: Transaction) {
         viewModelScope.launch {
-            val result = repository.delete(transaction.id)
+            val result = transactions.delete(transaction.id)
             actionError.value = (result as? AppResult.Failure)?.error
             if (result is AppResult.Success) {
                 content.update { it.copy(items = it.items.filterNot { item -> item.id == transaction.id }) }
@@ -103,12 +113,12 @@ class TransactionListViewModel(
         }
     }
 
-    fun retryPending(entry: OutboxEntity) {
-        viewModelScope.launch { repository.retryPending(entry) }
+    fun retryPending(entry: PendingWrite) {
+        viewModelScope.launch { retryPendingWrite(entry) }
     }
 
-    fun discardPending(entry: OutboxEntity) {
-        viewModelScope.launch { repository.discardPending(entry.id) }
+    fun discardPending(entry: PendingWrite) {
+        viewModelScope.launch { discardPendingWrite(entry) }
     }
 
     private fun load(reset: Boolean) {
@@ -119,7 +129,7 @@ class TransactionListViewModel(
         loadJob =
             viewModelScope.launch {
                 if (reset) loadTotals()
-                when (val result = repository.search(currentFilter, nextPage, TransactionRepository.PAGE_SIZE)) {
+                when (val result = transactions.search(currentFilter, nextPage)) {
                     is AppResult.Success ->
                         content.update {
                             it.copy(
@@ -138,7 +148,7 @@ class TransactionListViewModel(
                             if (reset &&
                                 currentFilter.isEmpty
                             ) {
-                                repository.recentTransactions.first()?.value
+                                transactions.observeRecent().first()?.value
                             } else {
                                 null
                             }
@@ -158,7 +168,7 @@ class TransactionListViewModel(
     }
 
     private suspend fun loadTotals() {
-        (repository.summary(filter.value) as? AppResult.Success)?.let { result ->
+        (transactions.getTotals(filter.value) as? AppResult.Success)?.let { result ->
             content.update { it.copy(totals = result.value) }
         }
     }

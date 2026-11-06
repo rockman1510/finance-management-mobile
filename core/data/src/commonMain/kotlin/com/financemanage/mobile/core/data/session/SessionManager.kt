@@ -2,7 +2,9 @@ package com.financemanage.mobile.core.data.session
 
 import com.financemanage.mobile.core.data.cache.JsonCache
 import com.financemanage.mobile.core.data.outbox.OutboxDao
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
+import com.financemanage.mobile.core.domain.model.SessionState
+import com.financemanage.mobile.core.domain.repository.AppSettingsRepository
+import com.financemanage.mobile.core.domain.repository.SessionRepository
 import com.financemanage.mobile.core.network.api
 import com.financemanage.mobile.core.network.auth.AuthTokens
 import com.financemanage.mobile.core.network.auth.SessionEvent
@@ -21,8 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-
-enum class SessionState { UNKNOWN, SIGNED_IN, SIGNED_OUT }
 
 /** Work to do before the session ends (e.g. unregister the push token while still authenticated). */
 fun interface SignOutHook {
@@ -47,9 +47,9 @@ class SessionManager(
     private val hooks: () -> List<SignOutHook>,
     sessionEvents: SessionEvents,
     private val scope: CoroutineScope,
-) {
+) : SessionRepository {
     private val mutableState = MutableStateFlow(SessionState.UNKNOWN)
-    val state: StateFlow<SessionState> = mutableState.asStateFlow()
+    override val state: StateFlow<SessionState> = mutableState.asStateFlow()
 
     init {
         scope.launch {
@@ -69,7 +69,7 @@ class SessionManager(
     }
 
     /** Revokes the session on the server (best effort) and wipes local data. */
-    suspend fun signOut() {
+    override suspend fun signOut() {
         hooks().forEach { runCatchingNonCancel { it.beforeSignOut() } }
         tokenStore.read()?.let { tokens ->
             apiCall {
@@ -83,7 +83,7 @@ class SessionManager(
     }
 
     /** After the account was deleted on the server: only local cleanup. */
-    suspend fun clearLocalSession(wipeSettings: Boolean = false) {
+    override suspend fun clearLocalSession(wipeSettings: Boolean) {
         tokenStore.clear()
         httpClient.resetCachedTokens()
         cache.clear()

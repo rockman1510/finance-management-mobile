@@ -1,17 +1,24 @@
 package com.financemanage.mobile.feature.budget.data
 
-import com.financemanage.mobile.core.data.cache.Cached
 import com.financemanage.mobile.core.data.cache.JsonCache
+import com.financemanage.mobile.core.domain.model.Cached
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.Money
 import com.financemanage.mobile.core.model.domain.TransactionType
 import com.financemanage.mobile.core.model.map
 import com.financemanage.mobile.core.model.onSuccess
-import com.financemanage.mobile.core.model.serialization.FallbackEnumSerializer
 import com.financemanage.mobile.core.model.serialization.MoneySerializer
 import com.financemanage.mobile.core.network.api
 import com.financemanage.mobile.core.network.error.apiCall
+import com.financemanage.mobile.feature.budget.domain.model.Budget
+import com.financemanage.mobile.feature.budget.domain.model.BudgetPeriod
+import com.financemanage.mobile.feature.budget.domain.model.BudgetState
+import com.financemanage.mobile.feature.budget.domain.model.BudgetStatus
+import com.financemanage.mobile.feature.budget.domain.model.BudgetTransactionDto
+import com.financemanage.mobile.feature.budget.domain.model.CreateBudgetRequest
+import com.financemanage.mobile.feature.budget.domain.model.UpdateBudgetRequest
+import com.financemanage.mobile.feature.budget.domain.repository.BudgetRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -28,32 +35,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-
-@Serializable(with = BudgetPeriod.Serializer::class)
-enum class BudgetPeriod {
-    WEEKLY,
-    MONTHLY,
-    QUARTERLY,
-    YEARLY,
-    CUSTOM,
-    UNKNOWN,
-    ;
-
-    internal object Serializer : FallbackEnumSerializer<BudgetPeriod>("BudgetPeriod", BudgetPeriod.entries, UNKNOWN)
-}
-
-@Serializable(with = BudgetState.Serializer::class)
-enum class BudgetState {
-    NOT_STARTED,
-    ON_TRACK,
-    WARNING,
-    EXCEEDED,
-    ENDED,
-    UNKNOWN,
-    ;
-
-    internal object Serializer : FallbackEnumSerializer<BudgetState>("BudgetState", BudgetState.entries, UNKNOWN)
-}
 
 @Serializable
 data class BudgetStatusDto(
@@ -81,71 +62,6 @@ data class BudgetDto(
     val endDate: LocalDate? = null,
     val repeat: Boolean = false,
     val current: BudgetStatusDto? = null,
-)
-
-@Serializable
-data class CreateBudgetRequest(
-    val name: String,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
-    val currency: String? = null,
-    val categoryIds: List<String> = emptyList(),
-    val walletId: String? = null,
-    val period: BudgetPeriod,
-    val startDate: LocalDate? = null,
-    val endDate: LocalDate? = null,
-    val repeat: Boolean? = null,
-)
-
-@Serializable
-data class UpdateBudgetRequest(
-    val name: String? = null,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val categoryIds: List<String>? = null,
-    val walletId: String? = null,
-    val allWallets: Boolean? = null,
-    val repeat: Boolean? = null,
-)
-
-/** Minimal transaction row for the budget's daily chart and list. */
-@Serializable
-data class BudgetTransactionDto(
-    val id: String,
-    val type: TransactionType = TransactionType.UNKNOWN,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val currency: String? = null,
-    val categoryId: String? = null,
-    val occurredOn: LocalDate? = null,
-    val note: String? = null,
-)
-
-@Serializable
-private data class BudgetTransactionPage(
-    val items: List<BudgetTransactionDto> = emptyList(),
-)
-
-data class BudgetStatus(
-    val periodStart: LocalDate?,
-    val periodEnd: LocalDate?,
-    val spent: Money,
-    val remaining: Money,
-    val percent: Int,
-    val dailySuggestion: Money?,
-    val daysLeft: Long,
-    val state: BudgetState,
-    val unconvertedCurrencies: List<String>,
-)
-
-data class Budget(
-    val id: String,
-    val name: String,
-    val amount: Money,
-    val categoryIds: List<String>,
-    val walletId: String?,
-    val period: BudgetPeriod,
-    val startDate: LocalDate?,
-    val endDate: LocalDate?,
-    val repeat: Boolean,
-    val current: BudgetStatus?,
 )
 
 fun BudgetDto.toDomain(): Budget {
@@ -179,25 +95,25 @@ fun BudgetDto.toDomain(): Budget {
     )
 }
 
-class BudgetRepository(
+class BudgetRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
-) {
+) : BudgetRepository {
     private val listSerializer = ListSerializer(BudgetDto.serializer())
 
     /** Budgets with the status of the current period, cached (Home and Plan tab). */
-    val budgets: Flow<Cached<List<Budget>>?> =
+    override val budgets: Flow<Cached<List<Budget>>?> =
         cache.observe(KEY, listSerializer).map { cached ->
             cached?.let { Cached(it.value.map(BudgetDto::toDomain), it.updatedAt) }
         }
 
-    suspend fun refresh(): AppResult<List<Budget>> =
+    override suspend fun refresh(): AppResult<List<Budget>> =
         apiCall { client.get(api("budgets")).body<List<BudgetDto>>() }
             .onSuccess { cache.put(KEY, listSerializer, it) }
             .map { list -> list.map(BudgetDto::toDomain) }
 
     /** A budget with the status of the period containing [date] (previous/next period navigation). */
-    suspend fun get(
+    override suspend fun get(
         id: String,
         date: LocalDate?,
     ): AppResult<Budget> =
@@ -205,12 +121,12 @@ class BudgetRepository(
             client.get(api("budgets/$id")) { date?.let { parameter("date", it.toString()) } }.body<BudgetDto>()
         }.map(BudgetDto::toDomain)
 
-    suspend fun create(request: CreateBudgetRequest): AppResult<Budget> =
+    override suspend fun create(request: CreateBudgetRequest): AppResult<Budget> =
         apiCall {
             client.post(api("budgets")) { json(request) }.body<BudgetDto>()
         }.onSuccess { refresh() }.map(BudgetDto::toDomain)
 
-    suspend fun update(
+    override suspend fun update(
         id: String,
         request: UpdateBudgetRequest,
     ): AppResult<Budget> =
@@ -218,14 +134,14 @@ class BudgetRepository(
             client.patch(api("budgets/$id")) { json(request) }.body<BudgetDto>()
         }.onSuccess { refresh() }.map(BudgetDto::toDomain)
 
-    suspend fun delete(id: String): AppResult<Unit> =
+    override suspend fun delete(id: String): AppResult<Unit> =
         apiCall {
             client.delete(api("budgets/$id"))
             Unit
         }.onSuccess { refresh() }
 
     /** Expenses counted by the budget in its period (categories + wallet + dates). */
-    suspend fun transactions(budget: Budget): AppResult<List<BudgetTransactionDto>> {
+    override suspend fun transactions(budget: Budget): AppResult<List<BudgetTransactionDto>> {
         val status = budget.current ?: return AppResult.Success(emptyList())
         return apiCall {
             client
@@ -250,3 +166,8 @@ class BudgetRepository(
         const val MAX_PAGE = 100
     }
 }
+
+@Serializable
+private data class BudgetTransactionPage(
+    val items: List<BudgetTransactionDto> = emptyList(),
+)

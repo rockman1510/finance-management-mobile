@@ -1,6 +1,12 @@
 package com.financemanage.mobile.feature.category
 
-import com.financemanage.mobile.core.data.shared.CategoryRepository
+import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.CreateCategoryUseCase
+import com.financemanage.mobile.core.domain.usecase.DeleteCategoryUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.UpdateCategoryUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.domain.CategoryType
 import com.financemanage.mobile.core.testing.MockBackend
@@ -25,13 +31,33 @@ private const val CATEGORIES =
 
 class CategoryViewModelsTest {
     private val backend = MockBackend().apply { get("categories", CATEGORIES) }
-    private val repository = CategoryRepository(backend.client, testJsonCache())
+    private val repository = CategoryRepositoryImpl(backend.client, testJsonCache())
+
+    private fun listViewModel() =
+        CategoryListViewModel(
+            ObserveCategoriesUseCase(repository),
+            RefreshCategoriesUseCase(repository),
+            DeleteCategoryUseCase(repository),
+        )
+
+    private fun formViewModel(
+        id: String?,
+        type: CategoryType,
+        parentId: String?,
+    ) = CategoryFormViewModel(
+        id,
+        type,
+        parentId,
+        GetCategoriesUseCase(repository),
+        CreateCategoryUseCase(repository),
+        UpdateCategoryUseCase(repository),
+    )
 
     @Test
     fun listLoadsAndReportsADeleteRefusal() =
         runViewModelTest {
             backend.fail(HttpMethod.Delete, "categories/food", HttpStatusCode.Conflict, "CATEGORY_IN_USE")
-            val viewModel = CategoryListViewModel(repository)
+            val viewModel = listViewModel()
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -51,7 +77,7 @@ class CategoryViewModelsTest {
     fun newCategoryOffersTopLevelParentsAndRequiresAName() =
         runViewModelTest {
             backend.post("categories", """{"id":"tea","name":"Trà","type":"EXPENSE","parentId":"food"}""")
-            val viewModel = CategoryFormViewModel(null, CategoryType.EXPENSE, "food", repository)
+            val viewModel = formViewModel(null, CategoryType.EXPENSE, "food")
             val loaded = viewModel.state.awaitValue { it.parents.isNotEmpty() }
             assertEquals(listOf("food", "salary"), loaded.parents.map { it.id })
 
@@ -70,7 +96,7 @@ class CategoryViewModelsTest {
     @Test
     fun changingTheTypeClearsTheParent() =
         runViewModelTest {
-            val viewModel = CategoryFormViewModel(null, CategoryType.EXPENSE, "food", repository)
+            val viewModel = formViewModel(null, CategoryType.EXPENSE, "food")
             viewModel.onType(CategoryType.INCOME)
             assertNull(viewModel.state.value.parentId)
         }
@@ -79,7 +105,7 @@ class CategoryViewModelsTest {
     fun editPrefillsAndOnlySendsNameAndIcon() =
         runViewModelTest {
             backend.patch("categories/cafe", """{"id":"cafe","name":"Cafe","type":"EXPENSE","parentId":"food"}""")
-            val viewModel = CategoryFormViewModel("cafe", CategoryType.EXPENSE, null, repository)
+            val viewModel = formViewModel("cafe", CategoryType.EXPENSE, null)
             val loaded = viewModel.state.awaitValue { it.name.isNotEmpty() }
             assertEquals("Cà phê", loaded.name)
             assertEquals("food", loaded.parentId)

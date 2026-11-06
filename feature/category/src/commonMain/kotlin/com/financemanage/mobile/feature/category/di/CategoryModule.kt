@@ -8,14 +8,16 @@ import org.koin.dsl.module
 
 val categoryModule =
     module {
-        viewModel { CategoryListViewModel(get()) }
+        viewModel { CategoryListViewModel(get(), get(), get()) }
         viewModel { params ->
             CategoryFormViewModel(
                 categoryId = params.values.getOrNull(0) as String?,
                 initialType =
                     CategoryType.entries.firstOrNull { it.name == params.values.getOrNull(1) } ?: CategoryType.EXPENSE,
                 initialParentId = params.values.getOrNull(2) as String?,
-                repository = get(),
+                getCategories = get(),
+                createCategory = get(),
+                updateCategory = get(),
             )
         }
     }

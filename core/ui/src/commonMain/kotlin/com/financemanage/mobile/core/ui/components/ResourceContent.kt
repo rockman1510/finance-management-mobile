@@ -13,10 +13,10 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.financemanage.mobile.core.data.cache.Resource
 import com.financemanage.mobile.core.ui.error.userMessage
 import com.financemanage.mobile.core.ui.resources.Res
 import com.financemanage.mobile.core.ui.resources.updated_at
+import com.financemanage.mobile.core.ui.state.Resource
 import com.financemanage.mobile.core.ui.theme.Spacing
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone

@@ -3,19 +3,11 @@ package com.financemanage.mobile.feature.transaction.data
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.model.domain.TransactionType
 import com.financemanage.mobile.core.model.serialization.MoneySerializer
+import com.financemanage.mobile.feature.transaction.domain.model.AttachmentDto
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
-
-@Serializable
-data class AttachmentDto(
-    val id: String,
-    val fileName: String? = null,
-    val contentType: String? = null,
-    val size: Long? = null,
-    val createdAt: Instant? = null,
-)
 
 @Serializable
 data class TransactionDto(
@@ -57,38 +49,6 @@ data class TotalsDto(
 )
 
 @Serializable
-data class CreateTransactionRequest(
-    val walletId: String,
-    val categoryId: String,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
-    val occurredOn: LocalDate? = null,
-    val note: String? = null,
-    val withPerson: String? = null,
-    val excludeFromReport: Boolean? = null,
-)
-
-@Serializable
-data class UpdateTransactionRequest(
-    val walletId: String? = null,
-    val categoryId: String? = null,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val occurredOn: LocalDate? = null,
-    val note: String? = null,
-    val withPerson: String? = null,
-    val excludeFromReport: Boolean? = null,
-)
-
-@Serializable
-data class TransferRequest(
-    val fromWalletId: String,
-    val toWalletId: String,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
-    @Serializable(with = MoneySerializer::class) val receivedAmount: BigDecimal? = null,
-    val occurredOn: LocalDate? = null,
-    val note: String? = null,
-)
-
-@Serializable
 data class TransferResponseDto(
     val transferId: String? = null,
 )
@@ -110,28 +70,4 @@ data class RecurringDto(
     val nextOccurrence: LocalDate? = null,
     val generatedCount: Int = 0,
     val active: Boolean = true,
-)
-
-@Serializable
-data class CreateRecurringRequest(
-    val walletId: String,
-    val categoryId: String,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
-    val note: String? = null,
-    val withPerson: String? = null,
-    val frequency: Frequency,
-    val interval: Int? = null,
-    val startDate: LocalDate,
-    val endDate: LocalDate? = null,
-)
-
-@Serializable
-data class UpdateRecurringRequest(
-    val walletId: String? = null,
-    val categoryId: String? = null,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val note: String? = null,
-    val withPerson: String? = null,
-    val endDate: LocalDate? = null,
-    val active: Boolean? = null,
 )

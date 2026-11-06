@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.settings.UserPreferences
+import com.financemanage.mobile.core.domain.model.UserPreferences
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.CommonCurrencies
 import com.financemanage.mobile.core.model.ErrorCodes

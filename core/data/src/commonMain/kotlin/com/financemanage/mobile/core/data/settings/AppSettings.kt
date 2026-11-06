@@ -8,40 +8,17 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.financemanage.mobile.core.domain.model.ThemeMode
+import com.financemanage.mobile.core.domain.model.UserPreferences
+import com.financemanage.mobile.core.domain.repository.AppSettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import okio.Path.Companion.toPath
 
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
-
-/** Local, non-secret preferences of the device. */
-data class UserPreferences(
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val hideBalances: Boolean = false,
-    val onboardingCompleted: Boolean = false,
-    /** Epoch ms until which the "turn on two-step verification" card stays hidden (F04). */
-    val twoFactorCardHiddenUntil: Long? = null,
-    /** Require fingerprint / Face ID (or the device passcode) when returning to the app (F04). */
-    val appLockEnabled: Boolean = false,
-    /** Lock again after this many minutes in the background: 1, 5 or 15. */
-    val relockAfterMinutes: Int = DEFAULT_RELOCK_MINUTES,
-    /** Recently used category ids, most recent first (F06 picker). */
-    val recentCategoryIds: List<String> = emptyList(),
-    /** Last wallet used in Quick add (F07). */
-    val lastWalletId: String? = null,
-    /** Notification permission was already requested (F20). */
-    val notificationPermissionAsked: Boolean = false,
-) {
-    companion object {
-        const val DEFAULT_RELOCK_MINUTES = 5
-        const val MAX_RECENT_CATEGORIES = 8
-    }
-}
-
-class AppSettingsRepository(
+class AppSettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
-) {
-    val preferences: Flow<UserPreferences> =
+) : AppSettingsRepository {
+    override val preferences: Flow<UserPreferences> =
         dataStore.data.map { prefs ->
             UserPreferences(
                 themeMode =
@@ -58,23 +35,23 @@ class AppSettingsRepository(
             )
         }
 
-    suspend fun setThemeMode(mode: ThemeMode) {
+    override suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { it[THEME_MODE] = mode.name }
     }
 
-    suspend fun setHideBalances(hide: Boolean) {
+    override suspend fun setHideBalances(hide: Boolean) {
         dataStore.edit { it[HIDE_BALANCES] = hide }
     }
 
-    suspend fun setOnboardingCompleted(completed: Boolean) {
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.edit { it[ONBOARDING_COMPLETED] = completed }
     }
 
-    suspend fun hideTwoFactorCardUntil(epochMillis: Long) {
+    override suspend fun hideTwoFactorCardUntil(epochMillis: Long) {
         dataStore.edit { it[TWO_FACTOR_CARD_HIDDEN_UNTIL] = epochMillis }
     }
 
-    suspend fun setAppLock(
+    override suspend fun setAppLock(
         enabled: Boolean,
         relockAfterMinutes: Int,
     ) {
@@ -84,7 +61,7 @@ class AppSettingsRepository(
         }
     }
 
-    suspend fun rememberCategory(categoryId: String) {
+    override suspend fun rememberCategory(categoryId: String) {
         dataStore.edit { prefs ->
             val current = prefs[RECENT_CATEGORIES]?.split(',')?.filter { it.isNotBlank() }.orEmpty()
             val updated =
@@ -97,16 +74,16 @@ class AppSettingsRepository(
         }
     }
 
-    suspend fun setLastWallet(walletId: String) {
+    override suspend fun setLastWallet(walletId: String) {
         dataStore.edit { it[LAST_WALLET_ID] = walletId }
     }
 
-    suspend fun setNotificationPermissionAsked() {
+    override suspend fun setNotificationPermissionAsked() {
         dataStore.edit { it[NOTIFICATION_PERMISSION_ASKED] = true }
     }
 
     /** Wipes every preference (sign-out of a deleted account). */
-    suspend fun clear() {
+    override suspend fun clear() {
         dataStore.edit { it.clear() }
     }
 

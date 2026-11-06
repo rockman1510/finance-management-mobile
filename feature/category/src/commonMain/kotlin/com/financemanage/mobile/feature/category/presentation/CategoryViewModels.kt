@@ -2,19 +2,23 @@ package com.financemanage.mobile.feature.category.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.shared.CategoryRepository
+import com.financemanage.mobile.core.domain.usecase.CreateCategoryUseCase
+import com.financemanage.mobile.core.domain.usecase.DeleteCategoryUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.UpdateCategoryUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.CategoryType
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -26,9 +30,11 @@ data class CategoryListUiState(
 )
 
 class CategoryListViewModel(
-    private val repository: CategoryRepository,
+    observeCategories: ObserveCategoriesUseCase,
+    refreshCategories: RefreshCategoriesUseCase,
+    private val deleteCategory: DeleteCategoryUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.categories) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeCategories()) { refreshCategories() }
     private val type = MutableStateFlow(CategoryType.EXPENSE)
     private val actionError = MutableStateFlow<AppError?>(null)
 
@@ -44,7 +50,7 @@ class CategoryListViewModel(
     }
 
     fun delete(id: String) {
-        viewModelScope.launch { actionError.value = (repository.delete(id) as? AppResult.Failure)?.error }
+        viewModelScope.launch { actionError.value = (deleteCategory(id) as? AppResult.Failure)?.error }
     }
 
     private companion object {
@@ -69,7 +75,9 @@ class CategoryFormViewModel(
     private val categoryId: String?,
     initialType: CategoryType,
     initialParentId: String?,
-    private val repository: CategoryRepository,
+    getCategories: GetCategoriesUseCase,
+    private val createCategory: CreateCategoryUseCase,
+    private val updateCategory: UpdateCategoryUseCase,
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow(
@@ -79,8 +87,7 @@ class CategoryFormViewModel(
 
     init {
         viewModelScope.launch {
-            val all =
-                repository.categories.first()?.value ?: (repository.refresh() as? AppResult.Success)?.value.orEmpty()
+            val all = getCategories()
             val existing = all.firstOrNull { it.id == categoryId }
             mutableState.update {
                 it.copy(
@@ -112,9 +119,9 @@ class CategoryFormViewModel(
         viewModelScope.launch {
             val result =
                 if (categoryId == null) {
-                    repository.create(form.name.trim(), form.type, form.parentId, form.icon)
+                    createCategory(form.name.trim(), form.type, form.parentId, form.icon)
                 } else {
-                    repository.update(categoryId, form.name.trim(), form.icon)
+                    updateCategory(categoryId, form.name.trim(), form.icon)
                 }
             mutableState.update {
                 it.copy(

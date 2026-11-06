@@ -2,18 +2,23 @@ package com.financemanage.mobile.feature.notification.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.push.PushBridge
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.domain.usecase.GetCachedProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePushReceivedUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.onFailure
 import com.financemanage.mobile.core.model.time.timeZoneOrDefault
 import com.financemanage.mobile.core.model.time.today
-import com.financemanage.mobile.feature.notification.data.NotificationDto
-import com.financemanage.mobile.feature.notification.data.NotificationPreferences
-import com.financemanage.mobile.feature.notification.data.NotificationRepository
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.notification.domain.model.NotificationDto
+import com.financemanage.mobile.feature.notification.domain.model.NotificationPreferences
+import com.financemanage.mobile.feature.notification.domain.usecase.GetNotificationPreferencesUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.MarkAllNotificationsReadUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.MarkNotificationReadUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.ObserveNotificationsUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.RefreshNotificationsUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.SaveNotificationPreferencesUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -60,10 +65,14 @@ data class NotificationsUiState(
 )
 
 class NotificationsViewModel(
-    private val repository: NotificationRepository,
-    private val profiles: ProfileRepository,
+    observeNotifications: ObserveNotificationsUseCase,
+    refreshNotifications: RefreshNotificationsUseCase,
+    private val markNotificationRead: MarkNotificationReadUseCase,
+    private val markAllNotificationsRead: MarkAllNotificationsReadUseCase,
+    getCachedProfile: GetCachedProfileUseCase,
+    observePushReceived: ObservePushReceivedUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.notifications) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeNotifications()) { refreshNotifications() }
     private val zoneId = MutableStateFlow<String?>(null)
     private val actionError = MutableStateFlow<AppError?>(null)
 
@@ -79,20 +88,20 @@ class NotificationsViewModel(
         }.stateIn(viewModelScope, SharingStarted.Eagerly, NotificationsUiState())
 
     init {
-        viewModelScope.launch { zoneId.value = profiles.current()?.timeZone }
+        viewModelScope.launch { zoneId.value = getCachedProfile()?.timeZone }
         // A push arrived while the list is open: refresh it.
-        viewModelScope.launch { PushBridge.received.collect { refresh() } }
+        viewModelScope.launch { observePushReceived().collect { refresh() } }
     }
 
     fun refresh() = holder.refresh()
 
     /** Tapping a notification marks it as read (best effort; the screen navigates right away). */
     fun open(notification: NotificationDto) {
-        if (!notification.read) viewModelScope.launch { repository.markRead(notification.id) }
+        if (!notification.read) viewModelScope.launch { markNotificationRead(notification.id) }
     }
 
     fun markAllRead() {
-        viewModelScope.launch { repository.markAllRead().onFailure { actionError.value = it } }
+        viewModelScope.launch { markAllNotificationsRead().onFailure { actionError.value = it } }
     }
 
     fun clearError() {
@@ -109,7 +118,8 @@ data class NotificationSettingsUiState(
 
 /** Notification settings (F20): each change is saved at once and rolled back when the server refuses it. */
 class NotificationSettingsViewModel(
-    private val repository: NotificationRepository,
+    private val getNotificationPreferences: GetNotificationPreferencesUseCase,
+    private val saveNotificationPreferences: SaveNotificationPreferencesUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(NotificationSettingsUiState())
     val state: StateFlow<NotificationSettingsUiState> = mutableState.asStateFlow()
@@ -122,7 +132,7 @@ class NotificationSettingsViewModel(
     fun load() {
         mutableState.update { it.copy(loading = true, loadError = null) }
         viewModelScope.launch {
-            when (val result = repository.preferences()) {
+            when (val result = getNotificationPreferences()) {
                 is AppResult.Success -> mutableState.update { it.copy(loading = false, preferences = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(loading = false, loadError = result.error) }
             }
@@ -167,7 +177,7 @@ class NotificationSettingsViewModel(
         saveJob?.cancel()
         saveJob =
             viewModelScope.launch {
-                when (val result = repository.savePreferences(updated)) {
+                when (val result = saveNotificationPreferences(updated)) {
                     is AppResult.Success -> mutableState.update { it.copy(preferences = result.value) }
                     is AppResult.Failure ->
                         mutableState.update {

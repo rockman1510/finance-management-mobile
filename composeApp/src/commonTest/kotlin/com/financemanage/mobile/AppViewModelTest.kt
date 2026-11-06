@@ -1,8 +1,12 @@
 package com.financemanage.mobile
 
-import com.financemanage.mobile.core.data.session.SessionState
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.settings.ThemeMode
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.domain.model.SessionState
+import com.financemanage.mobile.core.domain.model.ThemeMode
+import com.financemanage.mobile.core.domain.repository.SessionRepository
+import com.financemanage.mobile.core.domain.usecase.ObserveConnectivityUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePreferencesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveSessionStateUseCase
 import com.financemanage.mobile.core.testing.FakeNetworkMonitor
 import com.financemanage.mobile.core.testing.InMemoryPreferencesDataStore
 import kotlinx.coroutines.Dispatchers
@@ -35,9 +39,22 @@ class AppViewModelTest {
     @Test
     fun reflectsSettingsAndConnectivity() =
         runTest {
-            val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
+            val settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore())
             val network = FakeNetworkMonitor(online = true)
-            val viewModel = AppViewModel(settings, network, MutableStateFlow(SessionState.SIGNED_IN))
+            val session =
+                object : SessionRepository {
+                    override val state = MutableStateFlow(SessionState.SIGNED_IN)
+
+                    override suspend fun signOut() = Unit
+
+                    override suspend fun clearLocalSession(wipeSettings: Boolean) = Unit
+                }
+            val viewModel =
+                AppViewModel(
+                    ObservePreferencesUseCase(settings),
+                    ObserveConnectivityUseCase(network),
+                    ObserveSessionStateUseCase(session),
+                )
             val collector = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
 
             settings.setThemeMode(ThemeMode.DARK)

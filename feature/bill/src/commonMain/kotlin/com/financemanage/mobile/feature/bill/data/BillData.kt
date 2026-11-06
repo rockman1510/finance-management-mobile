@@ -1,12 +1,13 @@
 package com.financemanage.mobile.feature.bill.data
 
-import com.financemanage.mobile.core.data.cache.Cached
 import com.financemanage.mobile.core.data.cache.JsonCache
+import com.financemanage.mobile.core.domain.model.Cached
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.AsyncStatus
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.Money
+import com.financemanage.mobile.core.model.PollResult
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.model.map
 import com.financemanage.mobile.core.model.onSuccess
@@ -14,7 +15,12 @@ import com.financemanage.mobile.core.model.serialization.MoneySerializer
 import com.financemanage.mobile.core.network.api
 import com.financemanage.mobile.core.network.error.apiCall
 import com.financemanage.mobile.core.network.pending.PendingPoller
-import com.financemanage.mobile.core.network.pending.PollResult
+import com.financemanage.mobile.feature.bill.domain.model.Bill
+import com.financemanage.mobile.feature.bill.domain.model.CreateBillRequest
+import com.financemanage.mobile.feature.bill.domain.model.PayBillRequest
+import com.financemanage.mobile.feature.bill.domain.model.Payment
+import com.financemanage.mobile.feature.bill.domain.model.UpdateBillRequest
+import com.financemanage.mobile.feature.bill.domain.repository.BillRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -66,70 +72,6 @@ data class BillDto(
     val payments: List<PaymentDto> = emptyList(),
 )
 
-@Serializable
-data class CreateBillRequest(
-    val name: String,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
-    val walletId: String,
-    val categoryId: String,
-    val frequency: Frequency,
-    val interval: Int? = null,
-    val firstDueDate: LocalDate,
-    val endDate: LocalDate? = null,
-    val remindDaysBefore: Int? = null,
-    val note: String? = null,
-)
-
-@Serializable
-data class UpdateBillRequest(
-    val name: String? = null,
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val walletId: String? = null,
-    val categoryId: String? = null,
-    val endDate: LocalDate? = null,
-    val remindDaysBefore: Int? = null,
-    val note: String? = null,
-    val active: Boolean? = null,
-)
-
-@Serializable
-data class PayBillRequest(
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val walletId: String? = null,
-    val paidOn: LocalDate? = null,
-)
-
-data class Payment(
-    val id: String,
-    val dueDate: LocalDate?,
-    val amount: Money,
-    val paidOn: LocalDate?,
-    val status: AsyncStatus,
-    val transactionId: String?,
-    val failureReason: String?,
-)
-
-data class Bill(
-    val id: String,
-    val name: String,
-    val amount: Money,
-    val walletId: String?,
-    val categoryId: String?,
-    val frequency: Frequency,
-    val interval: Int,
-    val firstDueDate: LocalDate?,
-    val endDate: LocalDate?,
-    val remindDaysBefore: Int,
-    val note: String?,
-    val nextDueDate: LocalDate?,
-    val daysUntilDue: Long?,
-    val overdue: Boolean,
-    val active: Boolean,
-    val payments: List<Payment>,
-) {
-    val dueSoon: Boolean get() = !overdue && (daysUntilDue ?: Long.MAX_VALUE) <= remindDaysBefore
-}
-
 private const val DEFAULT_REMIND_DAYS = 3
 
 fun BillDto.toDomain(): Bill {
@@ -165,34 +107,34 @@ fun BillDto.toDomain(): Bill {
     )
 }
 
-class BillRepository(
+class BillRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
     private val poller: PendingPoller,
-) {
+) : BillRepository {
     private val listSerializer = ListSerializer(BillDto.serializer())
 
-    val bills: Flow<Cached<List<Bill>>?> =
+    override val bills: Flow<Cached<List<Bill>>?> =
         cache.observe(KEY, listSerializer).map { cached ->
             cached?.let { Cached(it.value.map(BillDto::toDomain), it.updatedAt) }
         }
 
-    suspend fun refresh(): AppResult<List<Bill>> =
+    override suspend fun refresh(): AppResult<List<Bill>> =
         apiCall { client.get(api("bills")).body<List<BillDto>>() }
             .onSuccess { cache.put(KEY, listSerializer, it) }
             .map { list -> list.map(BillDto::toDomain) }
 
-    suspend fun upcoming(days: Int): AppResult<List<Bill>> =
+    override suspend fun upcoming(days: Int): AppResult<List<Bill>> =
         apiCall { client.get(api("bills/upcoming")) { parameter("days", days) }.body<List<BillDto>>() }.map { list ->
             list.map(BillDto::toDomain)
         }
 
-    suspend fun get(id: String): AppResult<Bill> =
+    override suspend fun get(id: String): AppResult<Bill> =
         apiCall {
             client.get(api("bills/$id")).body<BillDto>()
         }.map(BillDto::toDomain)
 
-    suspend fun create(request: CreateBillRequest): AppResult<Bill> =
+    override suspend fun create(request: CreateBillRequest): AppResult<Bill> =
         apiCall {
             client
                 .post(
@@ -201,7 +143,7 @@ class BillRepository(
                 .body<BillDto>()
         }.onSuccess { refresh() }.map(BillDto::toDomain)
 
-    suspend fun update(
+    override suspend fun update(
         id: String,
         request: UpdateBillRequest,
     ): AppResult<Bill> =
@@ -209,7 +151,7 @@ class BillRepository(
             client.patch(api("bills/$id")) { json(request) }.body<BillDto>()
         }.onSuccess { refresh() }.map(BillDto::toDomain)
 
-    suspend fun delete(id: String): AppResult<Unit> =
+    override suspend fun delete(id: String): AppResult<Unit> =
         apiCall {
             client.delete(api("bills/$id"))
             Unit
@@ -219,7 +161,7 @@ class BillRepository(
      * Pays the period currently due (202). The expense is recorded asynchronously: the payment is polled until it
      * leaves PENDING (API §2.1).
      */
-    suspend fun pay(
+    override suspend fun pay(
         id: String,
         request: PayBillRequest,
     ): AppResult<PollResult<Payment>> {
@@ -244,7 +186,7 @@ class BillRepository(
         return AppResult.Success(result)
     }
 
-    suspend fun skip(id: String): AppResult<Unit> =
+    override suspend fun skip(id: String): AppResult<Unit> =
         apiCall {
             client.post(api("bills/$id/skip"))
             Unit

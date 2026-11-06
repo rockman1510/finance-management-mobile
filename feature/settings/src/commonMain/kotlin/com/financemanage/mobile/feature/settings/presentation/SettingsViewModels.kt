@@ -2,23 +2,40 @@ package com.financemanage.mobile.feature.settings.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.cache.memoryResource
-import com.financemanage.mobile.core.data.outbox.OutboxDao
-import com.financemanage.mobile.core.data.session.SessionManager
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.settings.ThemeMode
-import com.financemanage.mobile.core.data.settings.UserPreferences
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.UpdateProfileRequest
+import com.financemanage.mobile.core.domain.model.ThemeMode
+import com.financemanage.mobile.core.domain.model.UpdateProfileRequest
+import com.financemanage.mobile.core.domain.model.UserPreferences
+import com.financemanage.mobile.core.domain.usecase.GetCachedProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.GetProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.HideTwoFactorCardUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePendingWritesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePreferencesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.SetAppLockUseCase
+import com.financemanage.mobile.core.domain.usecase.SetHideBalancesUseCase
+import com.financemanage.mobile.core.domain.usecase.SetThemeModeUseCase
+import com.financemanage.mobile.core.domain.usecase.SignOutUseCase
+import com.financemanage.mobile.core.domain.usecase.UpdateProfileUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.Profile
-import com.financemanage.mobile.feature.settings.data.DeviceSession
-import com.financemanage.mobile.feature.settings.data.SecurityRepository
-import com.financemanage.mobile.feature.settings.data.TwoFactorSetup
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.core.ui.state.memoryResource
+import com.financemanage.mobile.feature.settings.domain.model.DeviceSession
+import com.financemanage.mobile.feature.settings.domain.model.TwoFactorSetup
+import com.financemanage.mobile.feature.settings.domain.usecase.ChangePasswordUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.DeleteAccountUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.DisableTwoFactorUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.EnableTwoFactorUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.GetDeviceSessionsUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.RevokeDeviceSessionUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.RevokeOtherDeviceSessionsUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.SendEmailVerificationCodeUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.SetupTwoFactorUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.VerifyEmailUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,19 +77,24 @@ data class SettingsUiState(
 }
 
 class SettingsViewModel(
-    private val profiles: ProfileRepository,
-    private val settings: AppSettingsRepository,
-    private val session: SessionManager,
-    outboxDao: OutboxDao,
+    observeProfile: ObserveProfileUseCase,
+    refreshProfile: RefreshProfileUseCase,
+    observePreferences: ObservePreferencesUseCase,
+    observePendingWrites: ObservePendingWritesUseCase,
+    private val hideTwoFactorCard: HideTwoFactorCardUseCase,
+    private val setHideBalancesUseCase: SetHideBalancesUseCase,
+    private val setThemeMode: SetThemeModeUseCase,
+    private val setAppLockUseCase: SetAppLockUseCase,
+    private val signOutUseCase: SignOutUseCase,
 ) : ViewModel() {
-    private val profileHolder = ResourceHolder(viewModelScope, profiles.profile) { profiles.refresh() }
+    private val profileHolder = ResourceHolder(viewModelScope, observeProfile()) { refreshProfile() }
     private val signingOut = MutableStateFlow(false)
 
     val state: StateFlow<SettingsUiState> =
         combine(
             profileHolder.state,
-            settings.preferences,
-            outboxDao.observeAll(),
+            observePreferences(),
+            observePendingWrites(),
             signingOut,
         ) { profile, prefs, outbox, out ->
             SettingsUiState(profile, prefs, outbox.size, out)
@@ -82,29 +104,51 @@ class SettingsViewModel(
 
     fun snoozeTwoFactorCard() {
         viewModelScope.launch {
-            settings.hideTwoFactorCardUntil((Clock.System.now() + TWO_FACTOR_CARD_SNOOZE).toEpochMilliseconds())
+            hideTwoFactorCard((Clock.System.now() + TWO_FACTOR_CARD_SNOOZE).toEpochMilliseconds())
         }
     }
 
     fun setHideBalances(hide: Boolean) {
-        viewModelScope.launch { settings.setHideBalances(hide) }
+        viewModelScope.launch { setHideBalancesUseCase(hide) }
     }
 
     fun setTheme(mode: ThemeMode) {
-        viewModelScope.launch { settings.setThemeMode(mode) }
+        viewModelScope.launch { setThemeMode(mode) }
     }
 
     fun setAppLock(
         enabled: Boolean,
         minutes: Int,
     ) {
-        viewModelScope.launch { settings.setAppLock(enabled, minutes) }
+        viewModelScope.launch { setAppLockUseCase(enabled, minutes) }
     }
 
     fun signOut() {
         if (signingOut.value) return
         signingOut.value = true
-        viewModelScope.launch { session.signOut() }
+        viewModelScope.launch { signOutUseCase() }
+    }
+
+    private companion object {
+        const val STOP_MS = 5_000L
+    }
+}
+
+// ---------------------------------------------------------------- App lock
+
+/** App lock settings (F04): fingerprint / Face ID when returning to the app, and the re-lock delay. */
+class AppLockViewModel(
+    observePreferences: ObservePreferencesUseCase,
+    private val setAppLockUseCase: SetAppLockUseCase,
+) : ViewModel() {
+    val preferences: StateFlow<UserPreferences> =
+        observePreferences().stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), UserPreferences())
+
+    fun setAppLock(
+        enabled: Boolean,
+        minutes: Int,
+    ) {
+        viewModelScope.launch { setAppLockUseCase(enabled, minutes) }
     }
 
     private companion object {
@@ -128,14 +172,15 @@ data class ProfileEditUiState(
 )
 
 class ProfileEditViewModel(
-    private val profiles: ProfileRepository,
+    getProfile: GetProfileUseCase,
+    private val updateProfile: UpdateProfileUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProfileEditUiState())
     val state: StateFlow<ProfileEditUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val profile = profiles.current() ?: (profiles.refresh() as? AppResult.Success)?.value
+            val profile = getProfile()
             if (profile != null) {
                 mutableState.update {
                     it.copy(
@@ -182,7 +227,7 @@ class ProfileEditViewModel(
         mutableState.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             val result =
-                profiles.update(
+                updateProfile(
                     UpdateProfileRequest(
                         fullName = current.fullName.trim(),
                         defaultCurrency = current.currency.value,
@@ -219,8 +264,9 @@ data class EmailVerificationUiState(
 )
 
 class EmailVerificationViewModel(
-    private val repository: SecurityRepository,
-    private val profiles: ProfileRepository,
+    private val sendEmailVerificationCode: SendEmailVerificationCodeUseCase,
+    private val verifyEmail: VerifyEmailUseCase,
+    observeProfile: ObserveProfileUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(EmailVerificationUiState())
     val state: StateFlow<EmailVerificationUiState> = mutableState.asStateFlow()
@@ -228,7 +274,7 @@ class EmailVerificationViewModel(
 
     init {
         viewModelScope.launch {
-            profiles.profile.map { it?.value }.first { it != null }?.let { profile ->
+            observeProfile().map { it?.value }.first { it != null }?.let { profile ->
                 mutableState.update { it.copy(email = profile.email, verified = profile.emailVerified) }
             }
         }
@@ -240,7 +286,7 @@ class EmailVerificationViewModel(
         if (mutableState.value.resendIn > 0 || mutableState.value.loading) return
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.sendVerificationCode()) {
+            when (val result = sendEmailVerificationCode()) {
                 is AppResult.Success -> {
                     mutableState.update { it.copy(loading = false, codeSent = true) }
                     startCountdown()
@@ -255,7 +301,7 @@ class EmailVerificationViewModel(
         if (code.length != CODE_LENGTH || mutableState.value.loading) return
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.verifyEmail(code)) {
+            when (val result = verifyEmail(code)) {
                 is AppResult.Success -> mutableState.update { it.copy(loading = false, verified = true) }
                 is AppResult.Failure ->
                     mutableState.update {
@@ -299,15 +345,15 @@ data class PasswordUiState(
 )
 
 class PasswordViewModel(
-    private val repository: SecurityRepository,
-    profiles: ProfileRepository,
+    private val changePassword: ChangePasswordUseCase,
+    getCachedProfile: GetCachedProfileUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(PasswordUiState())
     val state: StateFlow<PasswordUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val hasPassword = profiles.current()?.hasPassword ?: true
+            val hasPassword = getCachedProfile()?.hasPassword ?: true
             mutableState.update { it.copy(hasPassword = hasPassword) }
         }
     }
@@ -328,7 +374,7 @@ class PasswordViewModel(
         }
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val result = repository.changePassword(current.current.takeIf { current.hasPassword }, current.new)
+            val result = changePassword(current.current.takeIf { current.hasPassword }, current.new)
             mutableState.update {
                 it.copy(
                     loading = false,
@@ -359,8 +405,10 @@ data class TwoFactorUiState(
  * "I saved them". Cancelling half-way leaves 2FA off (the backend only enables it after a valid code).
  */
 class TwoFactorViewModel(
-    private val repository: SecurityRepository,
-    private val profiles: ProfileRepository,
+    private val setupTwoFactor: SetupTwoFactorUseCase,
+    private val enableTwoFactor: EnableTwoFactorUseCase,
+    private val disableTwoFactor: DisableTwoFactorUseCase,
+    getProfile: GetProfileUseCase,
     startSetupImmediately: Boolean,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(TwoFactorUiState())
@@ -368,8 +416,7 @@ class TwoFactorViewModel(
 
     init {
         viewModelScope.launch {
-            val enabled =
-                (profiles.current() ?: (profiles.refresh() as? AppResult.Success)?.value)?.twoFactorEnabled ?: false
+            val enabled = getProfile()?.twoFactorEnabled ?: false
             mutableState.update { it.copy(stage = if (enabled) TwoFactorStage.ON else TwoFactorStage.OFF_INTRO) }
             if (!enabled && startSetupImmediately) startSetup()
         }
@@ -379,12 +426,12 @@ class TwoFactorViewModel(
 
     fun startSetup() =
         call({
-            repository.setupTwoFactor()
+            setupTwoFactor()
         }) { state, setup -> state.copy(stage = TwoFactorStage.SETUP, setup = setup, code = "") }
 
     fun enable() {
         if (mutableState.value.code.length != CODE_LENGTH) return
-        call({ repository.enableTwoFactor(mutableState.value.code) }) { state, codes ->
+        call({ enableTwoFactor(mutableState.value.code) }) { state, codes ->
             state.copy(stage = TwoFactorStage.RECOVERY_CODES, recoveryCodes = codes, code = "")
         }
     }
@@ -396,7 +443,7 @@ class TwoFactorViewModel(
     fun disable() {
         if (mutableState.value.code.isBlank()) return
         call({
-            repository.disableTwoFactor(mutableState.value.code.trim())
+            disableTwoFactor(mutableState.value.code.trim())
         }) { state, _ -> state.copy(stage = TwoFactorStage.OFF_INTRO, code = "") }
     }
 
@@ -434,9 +481,11 @@ data class SessionsUiState(
 )
 
 class SessionsViewModel(
-    private val repository: SecurityRepository,
+    getDeviceSessions: GetDeviceSessionsUseCase,
+    private val revokeDeviceSession: RevokeDeviceSessionUseCase,
+    private val revokeOtherDeviceSessions: RevokeOtherDeviceSessionsUseCase,
 ) : ViewModel() {
-    private val holder = viewModelScope.memoryResource { repository.sessions() }
+    private val holder = viewModelScope.memoryResource { getDeviceSessions() }
     private val actionError = MutableStateFlow<AppError?>(null)
 
     val state: StateFlow<SessionsUiState> =
@@ -445,9 +494,9 @@ class SessionsViewModel(
 
     fun refresh() = holder.refresh()
 
-    fun revoke(id: String) = act { repository.revokeSession(id) }
+    fun revoke(id: String) = act { revokeDeviceSession(id) }
 
-    fun revokeOthers() = act { repository.revokeOtherSessions() }
+    fun revokeOthers() = act { revokeOtherDeviceSessions() }
 
     private fun act(block: suspend () -> AppResult<Unit>) {
         viewModelScope.launch {
@@ -470,16 +519,15 @@ data class DeleteAccountUiState(
 )
 
 class DeleteAccountViewModel(
-    private val repository: SecurityRepository,
-    private val profiles: ProfileRepository,
-    private val session: SessionManager,
+    private val deleteAccount: DeleteAccountUseCase,
+    getCachedProfile: GetCachedProfileUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DeleteAccountUiState())
     val state: StateFlow<DeleteAccountUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            profiles.current()?.let { profile ->
+            getCachedProfile()?.let { profile ->
                 mutableState.update { it.copy(email = profile.email, hasPassword = profile.hasPassword) }
             }
         }
@@ -501,9 +549,9 @@ class DeleteAccountViewModel(
         if (current.loading || !canDelete) return
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.deleteAccount(current.password, current.confirmEmail)) {
-                // Wipe every local trace and go back to Welcome (F04).
-                is AppResult.Success -> session.clearLocalSession(wipeSettings = true)
+            // On success every local trace is wiped and the app goes back to Welcome (F04).
+            when (val result = deleteAccount(current.password, current.confirmEmail)) {
+                is AppResult.Success -> Unit
                 is AppResult.Failure -> mutableState.update { it.copy(loading = false, error = result.error) }
             }
         }

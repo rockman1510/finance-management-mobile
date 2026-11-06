@@ -1,22 +1,11 @@
 package com.financemanage.mobile.core.network.pending
 
 import com.financemanage.mobile.core.model.AppResult
+import com.financemanage.mobile.core.model.PollResult
 import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-
-sealed interface PollResult<out T> {
-    /** The object left the `PENDING` state (`RECORDED`, `FAILED`…). */
-    data class Settled<out T>(
-        val value: T,
-    ) : PollResult<T>
-
-    /** Still pending after the timeout: show "Will update shortly" and refresh when the screen is shown again. */
-    data class TimedOut<out T>(
-        val lastValue: T?,
-    ) : PollResult<T>
-}
 
 /**
  * Polls an object after a `202`/`PENDING` answer (API §2.1) every [interval] for up to [timeout].

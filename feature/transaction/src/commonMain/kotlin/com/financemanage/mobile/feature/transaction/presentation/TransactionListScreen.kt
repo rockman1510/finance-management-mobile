@@ -50,8 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.outbox.OutboxEntity
-import com.financemanage.mobile.core.data.outbox.OutboxStatus
+import com.financemanage.mobile.core.domain.model.PendingWrite
 import com.financemanage.mobile.core.model.Money
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.Wallet
@@ -70,8 +69,8 @@ import com.financemanage.mobile.core.ui.resources.today
 import com.financemanage.mobile.core.ui.resources.yesterday
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.transaction.domain.Transaction
-import com.financemanage.mobile.feature.transaction.domain.TransactionTotals
+import com.financemanage.mobile.feature.transaction.domain.model.Transaction
+import com.financemanage.mobile.feature.transaction.domain.model.TransactionTotals
 import com.financemanage.mobile.feature.transaction.resources.Res
 import com.financemanage.mobile.feature.transaction.resources.delete_transaction
 import com.financemanage.mobile.feature.transaction.resources.discard
@@ -248,7 +247,7 @@ private fun TotalCell(
 @Composable
 private fun ActiveFilterChips(
     state: TransactionListUiState,
-    onChange: (com.financemanage.mobile.feature.transaction.domain.TransactionFilter) -> Unit,
+    onChange: (com.financemanage.mobile.feature.transaction.domain.model.TransactionFilter) -> Unit,
 ) {
     val filter = state.filter
     if (filter.copy(query = "").isEmpty) return
@@ -296,8 +295,8 @@ private fun TransactionList(
     onOpen: (String) -> Unit,
     onDelete: (Transaction) -> Unit,
     onLoadMore: () -> Unit,
-    onRetryPending: (OutboxEntity) -> Unit,
-    onDiscardPending: (OutboxEntity) -> Unit,
+    onRetryPending: (PendingWrite) -> Unit,
+    onDiscardPending: (PendingWrite) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val content = state.content
@@ -436,11 +435,11 @@ private fun SwipeToDelete(
 
 @Composable
 private fun PendingRow(
-    entry: OutboxEntity,
-    onRetry: (OutboxEntity) -> Unit,
-    onDiscard: (OutboxEntity) -> Unit,
+    entry: PendingWrite,
+    onRetry: (PendingWrite) -> Unit,
+    onDiscard: (PendingWrite) -> Unit,
 ) {
-    val failed = entry.status == OutboxStatus.FAILED.name
+    val failed = entry.failed
     ListItem(
         headlineContent = { Text(entry.summary) },
         supportingContent = {

@@ -1,8 +1,10 @@
 package com.financemanage.mobile.feature.onboarding
 
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.SetOnboardingCompletedUseCase
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.WalletType
 import com.financemanage.mobile.core.testing.InMemoryPreferencesDataStore
@@ -12,7 +14,11 @@ import com.financemanage.mobile.core.testing.awaitValue
 import com.financemanage.mobile.core.testing.bodyField
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
-import com.financemanage.mobile.feature.onboarding.data.OnboardingRepository
+import com.financemanage.mobile.feature.onboarding.data.OnboardingRepositoryImpl
+import com.financemanage.mobile.feature.onboarding.domain.usecase.CreateFirstWalletUseCase
+import com.financemanage.mobile.feature.onboarding.domain.usecase.CreateMonthlyBudgetUseCase
+import com.financemanage.mobile.feature.onboarding.domain.usecase.SetDefaultCurrencyUseCase
+import com.financemanage.mobile.feature.onboarding.domain.usecase.ShouldSkipOnboardingUseCase
 import com.financemanage.mobile.feature.onboarding.presentation.OnboardingStep
 import com.financemanage.mobile.feature.onboarding.presentation.OnboardingViewModel
 import io.ktor.http.HttpMethod
@@ -25,16 +31,21 @@ import kotlin.test.assertTrue
 class OnboardingViewModelTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
-    private val repository =
-        OnboardingRepository(
-            backend.client,
-            settings,
-            ProfileRepository(backend.client, cache),
-            WalletRepository(backend.client, cache),
-        )
+    private val settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore())
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+    private val wallets = WalletRepositoryImpl(backend.client, cache)
 
-    private fun viewModel() = OnboardingViewModel(repository, "Tiền mặt", "Chi tiêu hằng tháng")
+    private fun viewModel() =
+        OnboardingViewModel(
+            "Tiền mặt",
+            "Chi tiêu hằng tháng",
+            ShouldSkipOnboardingUseCase(settings, wallets),
+            GetDefaultCurrencyUseCase(profiles),
+            SetDefaultCurrencyUseCase(profiles),
+            CreateFirstWalletUseCase(wallets),
+            CreateMonthlyBudgetUseCase(OnboardingRepositoryImpl(backend.client)),
+            SetOnboardingCompletedUseCase(settings),
+        )
 
     @Test
     fun skippedWhenTheAccountAlreadyHasWallets() =

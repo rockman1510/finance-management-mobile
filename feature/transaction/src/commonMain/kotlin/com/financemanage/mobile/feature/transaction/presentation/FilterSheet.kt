@@ -33,7 +33,7 @@ import com.financemanage.mobile.core.ui.components.walletLabel
 import com.financemanage.mobile.core.ui.resources.all_wallets
 import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.transaction.domain.TransactionFilter
+import com.financemanage.mobile.feature.transaction.domain.model.TransactionFilter
 import com.financemanage.mobile.feature.transaction.resources.Res
 import com.financemanage.mobile.feature.transaction.resources.apply
 import com.financemanage.mobile.feature.transaction.resources.categories

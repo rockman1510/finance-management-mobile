@@ -1,18 +1,25 @@
 package com.financemanage.mobile.feature.investment.data
 
-import com.financemanage.mobile.core.data.cache.Cached
 import com.financemanage.mobile.core.data.cache.JsonCache
+import com.financemanage.mobile.core.domain.model.Cached
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.AsyncStatus
 import com.financemanage.mobile.core.model.CurrencyCode
-import com.financemanage.mobile.core.model.Money
+import com.financemanage.mobile.core.model.PollResult
 import com.financemanage.mobile.core.model.onSuccess
 import com.financemanage.mobile.core.model.serialization.MoneySerializer
 import com.financemanage.mobile.core.network.api
 import com.financemanage.mobile.core.network.error.apiCall
 import com.financemanage.mobile.core.network.pending.PendingPoller
-import com.financemanage.mobile.core.network.pending.PollResult
+import com.financemanage.mobile.feature.investment.domain.model.AssetDto
+import com.financemanage.mobile.feature.investment.domain.model.AssetRequest
+import com.financemanage.mobile.feature.investment.domain.model.IncomeRequest
+import com.financemanage.mobile.feature.investment.domain.model.PortfolioDto
+import com.financemanage.mobile.feature.investment.domain.model.TradeDto
+import com.financemanage.mobile.feature.investment.domain.model.TradeKind
+import com.financemanage.mobile.feature.investment.domain.model.TradeRequest
+import com.financemanage.mobile.feature.investment.domain.repository.InvestmentRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -31,122 +38,22 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 
-val AssetTypes = listOf("STOCK", "FUND", "GOLD", "CRYPTO", "BOND", "REAL_ESTATE", "OTHER")
-
-@Serializable
-data class TradeDto(
-    val id: String,
-    val type: String = "BUY",
-    @Serializable(with = MoneySerializer::class) val quantity: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val price: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val fee: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val cash: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val realized: BigDecimal? = null,
-    val date: LocalDate? = null,
-    val walletId: String? = null,
-    val cashStatus: AsyncStatus = AsyncStatus.NONE,
-    val transactionId: String? = null,
-)
-
-@Serializable
-data class AssetDto(
-    val id: String,
-    val name: String = "",
-    val symbol: String? = null,
-    val type: String = "OTHER",
-    val currency: String? = null,
-    val note: String? = null,
-    @Serializable(with = MoneySerializer::class) val quantity: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val averageCost: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val costBasis: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val lastPrice: BigDecimal? = null,
-    val priceDate: LocalDate? = null,
-    val priced: Boolean = false,
-    @Serializable(with = MoneySerializer::class) val marketValue: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val unrealized: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val unrealizedPercent: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val realized: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val totalReturn: BigDecimal? = null,
-    val trades: List<TradeDto> = emptyList(),
-) {
-    val currencyCode: CurrencyCode get() = currency?.let { CurrencyCode.parse(it) } ?: CurrencyCode.DEFAULT
-
-    fun money(value: BigDecimal?) = Money(value ?: BigDecimal.ZERO, currencyCode)
-}
-
-@Serializable
-data class AllocationDto(
-    val type: String = "OTHER",
-    @Serializable(with = MoneySerializer::class) val value: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val percent: BigDecimal? = null,
-)
-
-@Serializable
-data class PortfolioDto(
-    val currency: String? = null,
-    @Serializable(with = MoneySerializer::class) val marketValue: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val costBasis: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val unrealized: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val unrealizedPercent: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val realized: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val totalReturn: BigDecimal? = null,
-    val allocation: List<AllocationDto> = emptyList(),
-) {
-    val currencyCode: CurrencyCode get() = currency?.let { CurrencyCode.parse(it) } ?: CurrencyCode.DEFAULT
-
-    fun money(value: BigDecimal?) = Money(value ?: BigDecimal.ZERO, currencyCode)
-}
-
-@Serializable
-data class AssetRequest(
-    val name: String,
-    val symbol: String? = null,
-    val type: String? = null,
-    val currency: String? = null,
-    val note: String? = null,
-)
-
-@Serializable
-data class TradeRequest(
-    @Serializable(with = MoneySerializer::class) val quantity: BigDecimal,
-    @Serializable(with = MoneySerializer::class) val price: BigDecimal,
-    @Serializable(with = MoneySerializer::class) val fee: BigDecimal? = null,
-    val walletId: String? = null,
-    val date: LocalDate? = null,
-)
-
-@Serializable
-data class IncomeRequest(
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal,
-    val walletId: String? = null,
-    val categoryId: String? = null,
-    val date: LocalDate? = null,
-)
-
 @Serializable
 private data class PriceRequest(
     @Serializable(with = MoneySerializer::class) val price: BigDecimal,
     val date: LocalDate? = null,
 )
 
-enum class TradeKind(
-    val path: String,
-) {
-    BUY("buys"),
-    SELL("sells"),
-    INCOME("incomes"),
-}
-
-class InvestmentRepository(
+class InvestmentRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
     private val poller: PendingPoller,
-) {
+) : InvestmentRepository {
     private val listSerializer = ListSerializer(AssetDto.serializer())
 
-    val assets: Flow<Cached<List<AssetDto>>?> = cache.observe(KEY, listSerializer)
+    override val assets: Flow<Cached<List<AssetDto>>?> = cache.observe(KEY, listSerializer)
 
-    suspend fun refresh(): AppResult<List<AssetDto>> =
+    override suspend fun refresh(): AppResult<List<AssetDto>> =
         apiCall {
             client
                 .get(
@@ -154,7 +61,7 @@ class InvestmentRepository(
                 ).body<List<AssetDto>>()
         }.onSuccess { cache.put(KEY, listSerializer, it) }
 
-    suspend fun portfolio(currency: CurrencyCode): AppResult<PortfolioDto> =
+    override suspend fun portfolio(currency: CurrencyCode): AppResult<PortfolioDto> =
         apiCall {
             client
                 .get(
@@ -163,12 +70,15 @@ class InvestmentRepository(
                 .body<PortfolioDto>()
         }
 
-    suspend fun get(id: String): AppResult<AssetDto> = apiCall { client.get(api("investments/$id")).body<AssetDto>() }
+    override suspend fun get(id: String): AppResult<AssetDto> =
+        apiCall {
+            client.get(api("investments/$id")).body<AssetDto>()
+        }
 
-    suspend fun create(request: AssetRequest): AppResult<AssetDto> =
+    override suspend fun create(request: AssetRequest): AppResult<AssetDto> =
         apiCall { client.post(api("investments")) { json(request) }.body<AssetDto>() }.onSuccess { refresh() }
 
-    suspend fun update(
+    override suspend fun update(
         id: String,
         request: AssetRequest,
     ): AppResult<AssetDto> =
@@ -179,13 +89,13 @@ class InvestmentRepository(
                 }.body<AssetDto>()
         }.onSuccess { refresh() }
 
-    suspend fun delete(id: String): AppResult<Unit> =
+    override suspend fun delete(id: String): AppResult<Unit> =
         apiCall {
             client.delete(api("investments/$id"))
             Unit
         }.onSuccess { refresh() }
 
-    suspend fun updatePrice(
+    override suspend fun updatePrice(
         id: String,
         price: BigDecimal,
         date: LocalDate?,
@@ -195,7 +105,7 @@ class InvestmentRepository(
         }
 
     /** Buy / sell / dividend (201). With a wallet the cash is recorded asynchronously and polled (API §2.1). */
-    suspend fun trade(
+    override suspend fun trade(
         id: String,
         kind: TradeKind,
         body: Any,

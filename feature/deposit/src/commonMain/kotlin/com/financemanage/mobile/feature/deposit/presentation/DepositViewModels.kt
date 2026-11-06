@@ -2,39 +2,47 @@ package com.financemanage.mobile.feature.deposit.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.AsyncStatus
 import com.financemanage.mobile.core.model.CurrencyCode
+import com.financemanage.mobile.core.model.PollResult
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toBigDecimalOrNull
-import com.financemanage.mobile.core.network.pending.PollResult
 import com.financemanage.mobile.core.ui.components.PendingAction
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.deposit.data.CreateDepositRequest
-import com.financemanage.mobile.feature.deposit.data.DepositDto
-import com.financemanage.mobile.feature.deposit.data.DepositPreviewDto
-import com.financemanage.mobile.feature.deposit.data.DepositRepository
-import com.financemanage.mobile.feature.deposit.data.SettlementQuoteDto
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.deposit.domain.model.CreateDepositRequest
+import com.financemanage.mobile.feature.deposit.domain.model.DepositDto
+import com.financemanage.mobile.feature.deposit.domain.model.DepositPreviewDto
+import com.financemanage.mobile.feature.deposit.domain.model.SettlementQuoteDto
+import com.financemanage.mobile.feature.deposit.domain.usecase.AwaitDepositRecordedUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.CreateDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.DeleteDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.GetDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.GetSettlementQuoteUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.ObserveDepositsUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.PreviewDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.RefreshDepositsUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.SettleDepositUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
 class DepositListViewModel(
-    private val repository: DepositRepository,
+    observeDeposits: ObserveDepositsUseCase,
+    refreshDeposits: RefreshDepositsUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.deposits) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeDeposits()) { refreshDeposits() }
     val state: StateFlow<Resource<List<DepositDto>>> = holder.state
 
     fun refresh() = holder.refresh()
@@ -81,9 +89,12 @@ data class DepositFormUiState(
 
 /** Create a deposit (F16) with a preview block updated while typing. */
 class DepositFormViewModel(
-    private val repository: DepositRepository,
-    wallets: WalletRepository,
-    profiles: ProfileRepository,
+    private val previewDeposit: PreviewDepositUseCase,
+    private val createDeposit: CreateDepositUseCase,
+    private val awaitDepositRecorded: AwaitDepositRecordedUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DepositFormUiState())
     val state: StateFlow<DepositFormUiState> = mutableState.asStateFlow()
@@ -91,17 +102,14 @@ class DepositFormViewModel(
 
     init {
         viewModelScope.launch {
-            val profile = profiles.current()
+            val currency = getDefaultCurrency()
+            val openDate = getToday()
+            val walletList = getCachedWallets().filter { w -> !w.archived }
             mutableState.update {
                 it.copy(
-                    currency = profile?.defaultCurrency ?: CurrencyCode.DEFAULT,
-                    openDate = today(profile?.timeZone),
-                    wallets =
-                        wallets.wallets
-                            .first()
-                            ?.value
-                            .orEmpty()
-                            .filter { w -> !w.archived },
+                    currency = currency,
+                    openDate = openDate,
+                    wallets = walletList,
                 )
             }
         }
@@ -143,7 +151,7 @@ class DepositFormViewModel(
             viewModelScope.launch {
                 delay(PREVIEW_DEBOUNCE_MS)
                 val request = request(mutableState.value) ?: return@launch
-                (repository.preview(request) as? AppResult.Success)?.let { result ->
+                (previewDeposit(request) as? AppResult.Success)?.let { result ->
                     mutableState.update { it.copy(preview = result.value) }
                 }
             }
@@ -157,13 +165,13 @@ class DepositFormViewModel(
         }
         mutableState.update { it.copy(saving = true) }
         viewModelScope.launch {
-            when (val result = repository.create(request)) {
+            when (val result = createDeposit(request)) {
                 is AppResult.Failure -> mutableState.update { it.copy(saving = false, error = result.error) }
                 is AppResult.Success -> {
                     var pending: PendingAction? = null
                     if (result.value.anyPending) {
                         mutableState.update { it.copy(pending = PendingAction.Processing) }
-                        val poll = repository.awaitWallet(result.value.id)
+                        val poll = awaitDepositRecorded(result.value.id)
                         pending =
                             when (poll) {
                                 is PollResult.Settled -> pendingFrom(poll.value, false)
@@ -194,9 +202,13 @@ data class DepositDetailUiState(
 
 class DepositDetailViewModel(
     private val id: String,
-    private val repository: DepositRepository,
-    wallets: WalletRepository,
-    profiles: ProfileRepository,
+    private val getDeposit: GetDepositUseCase,
+    private val getSettlementQuote: GetSettlementQuoteUseCase,
+    private val settleDeposit: SettleDepositUseCase,
+    private val awaitDepositRecorded: AwaitDepositRecordedUseCase,
+    private val deleteDeposit: DeleteDepositUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(DepositDetailUiState())
     val state: StateFlow<DepositDetailUiState> = mutableState.asStateFlow()
@@ -206,10 +218,10 @@ class DepositDetailViewModel(
             mutableState.update {
                 it.copy(
                     wallets =
-                        wallets.wallets.first()?.value.orEmpty().filter { w ->
+                        getCachedWallets().filter { w ->
                             !w.archived
                         },
-                    today = today(profiles.current()?.timeZone),
+                    today = getToday(),
                 )
             }
         }
@@ -217,7 +229,7 @@ class DepositDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            when (val result = repository.get(id)) {
+            when (val result = getDeposit(id)) {
                 is AppResult.Success -> mutableState.update { it.copy(deposit = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(error = result.error) }
             }
@@ -226,7 +238,7 @@ class DepositDetailViewModel(
 
     fun loadQuote(date: LocalDate?) {
         viewModelScope.launch {
-            when (val result = repository.quote(id, date)) {
+            when (val result = getSettlementQuote(id, date)) {
                 is AppResult.Success -> mutableState.update { it.copy(quote = result.value, error = null) }
                 is AppResult.Failure -> mutableState.update { it.copy(quote = null, error = result.error) }
             }
@@ -252,7 +264,7 @@ class DepositDetailViewModel(
             )
         }
         viewModelScope.launch {
-            when (val result = repository.settle(id, date, toWalletId)) {
+            when (val result = settleDeposit(id, date, toWalletId)) {
                 is AppResult.Failure ->
                     mutableState.update {
                         it.copy(
@@ -264,7 +276,7 @@ class DepositDetailViewModel(
                 is AppResult.Success -> {
                     val pending =
                         if (toWalletId != null) {
-                            when (val poll = repository.awaitWallet(id)) {
+                            when (val poll = awaitDepositRecorded(id)) {
                                 is PollResult.Settled -> pendingFrom(poll.value, false)
                                 is PollResult.TimedOut -> PendingAction.WillUpdate
                             }
@@ -280,7 +292,7 @@ class DepositDetailViewModel(
 
     fun delete() {
         viewModelScope.launch {
-            val result = repository.delete(id)
+            val result = deleteDeposit(id)
             mutableState.update {
                 it.copy(
                     deleted = result is AppResult.Success,

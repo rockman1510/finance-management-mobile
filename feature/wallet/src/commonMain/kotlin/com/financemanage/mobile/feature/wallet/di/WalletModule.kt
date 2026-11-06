@@ -9,8 +9,8 @@ import org.koin.dsl.module
 
 val walletModule =
     module {
-        viewModel { WalletListViewModel(get(), get()) }
-        viewModel { params -> WalletDetailViewModel(params.get(), get()) }
-        viewModel { params -> WalletFormViewModel(params.values.getOrNull(0) as String?, get(), get()) }
-        viewModel { params -> AdjustBalanceViewModel(params.get(), get(), get()) }
+        viewModel { WalletListViewModel(get(), get(), get(), get()) }
+        viewModel { params -> WalletDetailViewModel(params.get(), get(), get(), get(), get()) }
+        viewModel { params -> WalletFormViewModel(params.values.getOrNull(0) as String?, get(), get(), get(), get()) }
+        viewModel { params -> AdjustBalanceViewModel(params.get(), get(), get(), get()) }
     }

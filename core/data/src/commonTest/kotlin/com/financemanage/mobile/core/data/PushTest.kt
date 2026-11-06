@@ -1,9 +1,9 @@
 package com.financemanage.mobile.core.data
 
-import com.financemanage.mobile.core.data.push.NotificationLink
 import com.financemanage.mobile.core.data.push.PushBridge
 import com.financemanage.mobile.core.data.push.PushRegistrar
-import com.financemanage.mobile.core.data.session.SessionState
+import com.financemanage.mobile.core.domain.model.NotificationLink
+import com.financemanage.mobile.core.domain.model.SessionState
 import com.financemanage.mobile.core.testing.MockBackend
 import com.financemanage.mobile.core.testing.apiPath
 import com.financemanage.mobile.core.testing.bodyText

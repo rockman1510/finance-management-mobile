@@ -65,7 +65,7 @@ import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
 import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.deposit.data.DepositDto
+import com.financemanage.mobile.feature.deposit.domain.model.DepositDto
 import com.financemanage.mobile.feature.deposit.resources.Res
 import com.financemanage.mobile.feature.deposit.resources.account_number
 import com.financemanage.mobile.feature.deposit.resources.accrued_interest
@@ -258,7 +258,7 @@ private fun DepositRow(
 
 @Composable
 private fun PreviewCard(
-    preview: com.financemanage.mobile.feature.deposit.data.DepositPreviewDto,
+    preview: com.financemanage.mobile.feature.deposit.domain.model.DepositPreviewDto,
     currency: com.financemanage.mobile.core.model.CurrencyCode,
 ) {
     Card(Modifier.fillMaxWidth()) {

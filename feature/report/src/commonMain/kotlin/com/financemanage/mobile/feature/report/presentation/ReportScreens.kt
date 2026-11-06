@@ -57,10 +57,10 @@ import com.financemanage.mobile.core.ui.components.currencyLabel
 import com.financemanage.mobile.core.ui.error.userMessage
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.report.data.CategoryTotalDto
-import com.financemanage.mobile.feature.report.data.DashboardDto
-import com.financemanage.mobile.feature.report.data.NetWorthDto
-import com.financemanage.mobile.feature.report.data.moneyOf
+import com.financemanage.mobile.feature.report.domain.model.CategoryTotalDto
+import com.financemanage.mobile.feature.report.domain.model.DashboardDto
+import com.financemanage.mobile.feature.report.domain.model.NetWorthDto
+import com.financemanage.mobile.feature.report.domain.model.moneyOf
 import com.financemanage.mobile.feature.report.resources.Res
 import com.financemanage.mobile.feature.report.resources.active_deposits
 import com.financemanage.mobile.feature.report.resources.active_loans

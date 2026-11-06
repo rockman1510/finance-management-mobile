@@ -5,9 +5,10 @@ import com.financemanage.mobile.core.data.cache.JsonCacheDao
 import com.financemanage.mobile.core.data.cache.JsonCacheEntity
 import com.financemanage.mobile.core.data.outbox.OutboxDao
 import com.financemanage.mobile.core.data.outbox.OutboxEntity
-import com.financemanage.mobile.core.data.outbox.OutboxStatus
 import com.financemanage.mobile.core.data.session.SessionManager
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.domain.model.OutboxStatus
+import com.financemanage.mobile.core.domain.repository.AppSettingsRepository
 import com.financemanage.mobile.core.network.NetworkJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,8 @@ class FakeOutboxDao : OutboxDao {
     val rows = MutableStateFlow<List<OutboxEntity>>(emptyList())
 
     override fun observeAll(): Flow<List<OutboxEntity>> = rows.map { list -> list.sortedBy { it.createdAtEpochMillis } }
+
+    override suspend fun get(id: String): OutboxEntity? = rows.value.firstOrNull { it.id == id }
 
     override suspend fun waiting(): List<OutboxEntity> =
         rows.value.filter { it.status == OutboxStatus.WAITING.name }.sortedBy { it.createdAtEpochMillis }
@@ -111,7 +114,7 @@ fun testSessionManager(
     tokenStore: FakeTokenStore = backend.tokenStore,
     cache: JsonCache = testJsonCache(),
     outbox: FakeOutboxDao = FakeOutboxDao(),
-    settings: AppSettingsRepository = AppSettingsRepository(InMemoryPreferencesDataStore()),
+    settings: AppSettingsRepository = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore()),
 ): SessionManager =
     SessionManager(
         tokenStore = tokenStore,

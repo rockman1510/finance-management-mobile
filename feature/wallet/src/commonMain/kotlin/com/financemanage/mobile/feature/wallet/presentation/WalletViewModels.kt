@@ -2,22 +2,29 @@ package com.financemanage.mobile.feature.wallet.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.shared.AdjustBalanceRequest
-import com.financemanage.mobile.core.data.shared.CreateWalletRequest
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.UpdateWalletRequest
-import com.financemanage.mobile.core.data.shared.WalletRepository
-import com.financemanage.mobile.core.data.shared.WalletTotal
+import com.financemanage.mobile.core.domain.model.AdjustBalanceRequest
+import com.financemanage.mobile.core.domain.model.CreateWalletRequest
+import com.financemanage.mobile.core.domain.model.UpdateWalletRequest
+import com.financemanage.mobile.core.domain.model.WalletTotal
+import com.financemanage.mobile.core.domain.usecase.AdjustWalletBalanceUseCase
+import com.financemanage.mobile.core.domain.usecase.CreateWalletUseCase
+import com.financemanage.mobile.core.domain.usecase.DeleteWalletUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.GetWalletTotalUseCase
+import com.financemanage.mobile.core.domain.usecase.GetWalletUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.UpdateWalletUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.Wallet
 import com.financemanage.mobile.core.model.domain.WalletType
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toPlainString
 import com.financemanage.mobile.core.ui.components.parseAmountInput
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,10 +47,12 @@ data class WalletListUiState(
 )
 
 class WalletListViewModel(
-    private val wallets: WalletRepository,
-    private val profiles: ProfileRepository,
+    observeWallets: ObserveWalletsUseCase,
+    private val refreshWallets: RefreshWalletsUseCase,
+    private val getWalletTotal: GetWalletTotalUseCase,
+    private val getDefaultCurrency: GetDefaultCurrencyUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, wallets.wallets) { refreshAll() }
+    private val holder = ResourceHolder(viewModelScope, observeWallets()) { refreshAll() }
     private val total = MutableStateFlow<WalletTotal?>(null)
 
     val state: StateFlow<WalletListUiState> =
@@ -53,9 +62,8 @@ class WalletListViewModel(
     fun refresh() = holder.refresh()
 
     private suspend fun refreshAll(): AppResult<*> {
-        val result = wallets.refresh()
-        val currency = profiles.current()?.defaultCurrency ?: CurrencyCode.DEFAULT
-        (wallets.total(currency) as? AppResult.Success)?.let { total.value = it.value }
+        val result = refreshWallets()
+        (getWalletTotal(getDefaultCurrency()) as? AppResult.Success)?.let { total.value = it.value }
         return result
     }
 }
@@ -72,7 +80,10 @@ data class WalletDetailUiState(
 
 class WalletDetailViewModel(
     private val walletId: String,
-    private val wallets: WalletRepository,
+    observeWallets: ObserveWalletsUseCase,
+    private val refreshWallets: RefreshWalletsUseCase,
+    private val updateWallet: UpdateWalletUseCase,
+    private val deleteWallet: DeleteWalletUseCase,
 ) : ViewModel() {
     private val busy = MutableStateFlow(false)
     private val error = MutableStateFlow<AppError?>(null)
@@ -80,7 +91,7 @@ class WalletDetailViewModel(
 
     val state: StateFlow<WalletDetailUiState> =
         combine(
-            wallets.wallets.map { cached ->
+            observeWallets().map { cached ->
                 cached?.value?.firstOrNull { it.id == walletId }
             },
             busy,
@@ -90,13 +101,13 @@ class WalletDetailViewModel(
             WalletDetailUiState(wallet, loading = wallet == null && e == null && !d, busy = b, error = e, deleted = d)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), WalletDetailUiState())
 
-    fun refresh() = act { wallets.refresh() }
+    fun refresh() = act { refreshWallets() }
 
-    fun setArchived(archived: Boolean) = act { wallets.update(walletId, UpdateWalletRequest(archived = archived)) }
+    fun setArchived(archived: Boolean) = act { updateWallet(walletId, UpdateWalletRequest(archived = archived)) }
 
     fun delete() =
         act {
-            wallets.delete(walletId).also { if (it is AppResult.Success) deleted.value = true }
+            deleteWallet(walletId).also { if (it is AppResult.Success) deleted.value = true }
         }
 
     private fun act(block: suspend () -> AppResult<*>) {
@@ -133,8 +144,10 @@ data class WalletFormUiState(
 
 class WalletFormViewModel(
     private val walletId: String?,
-    private val wallets: WalletRepository,
-    private val profiles: ProfileRepository,
+    getWallet: GetWalletUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
+    private val createWallet: CreateWalletUseCase,
+    private val updateWallet: UpdateWalletUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(WalletFormUiState(isEdit = walletId != null))
     val state: StateFlow<WalletFormUiState> = mutableState.asStateFlow()
@@ -142,10 +155,10 @@ class WalletFormViewModel(
     init {
         viewModelScope.launch {
             if (walletId == null) {
-                val currency = profiles.current()?.defaultCurrency ?: CurrencyCode.DEFAULT
+                val currency = getDefaultCurrency()
                 mutableState.update { it.copy(loaded = true, currency = currency) }
             } else {
-                when (val result = wallets.get(walletId)) {
+                when (val result = getWallet(walletId)) {
                     is AppResult.Success -> mutableState.update { result.value.toForm(it) }
                     is AppResult.Failure -> mutableState.update { it.copy(loaded = true, error = result.error) }
                 }
@@ -251,7 +264,7 @@ class WalletFormViewModel(
         viewModelScope.launch {
             val result =
                 if (walletId == null) {
-                    wallets.create(
+                    createWallet(
                         CreateWalletRequest(
                             name = form.name.trim(),
                             type = form.type,
@@ -264,7 +277,7 @@ class WalletFormViewModel(
                         ),
                     )
                 } else {
-                    wallets.update(
+                    updateWallet(
                         walletId,
                         UpdateWalletRequest(
                             name = form.name.trim(),
@@ -306,16 +319,17 @@ data class AdjustBalanceUiState(
 
 class AdjustBalanceViewModel(
     private val walletId: String,
-    private val wallets: WalletRepository,
-    private val profiles: ProfileRepository,
+    getWallet: GetWalletUseCase,
+    getToday: GetTodayUseCase,
+    private val adjustWalletBalance: AdjustWalletBalanceUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(AdjustBalanceUiState())
     val state: StateFlow<AdjustBalanceUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val date = today(profiles.current()?.timeZone)
-            when (val result = wallets.get(walletId)) {
+            val date = getToday()
+            when (val result = getWallet(walletId)) {
                 is AppResult.Success ->
                     mutableState.update {
                         it.copy(
@@ -350,7 +364,7 @@ class AdjustBalanceViewModel(
         mutableState.update { it.copy(saving = true) }
         viewModelScope.launch {
             val result =
-                wallets.adjustBalance(
+                adjustWalletBalance(
                     walletId,
                     AdjustBalanceRequest(amount, current.date, current.note.ifBlank { null }),
                 )

@@ -3,9 +3,9 @@ package com.financemanage.mobile.di
 import com.financemanage.mobile.AppViewModel
 import com.financemanage.mobile.core.data.di.dataModule
 import com.financemanage.mobile.core.data.di.dataPlatformModule
+import com.financemanage.mobile.core.data.di.domainModule
 import com.financemanage.mobile.core.data.outbox.OutboxSync
 import com.financemanage.mobile.core.data.push.PushRegistrar
-import com.financemanage.mobile.core.data.session.SessionManager
 import com.financemanage.mobile.core.network.ApiConfig
 import com.financemanage.mobile.core.network.di.networkModule
 import com.financemanage.mobile.feature.auth.di.AuthConfig
@@ -25,17 +25,19 @@ import com.financemanage.mobile.feature.saving.di.savingModule
 import com.financemanage.mobile.feature.settings.di.settingsModule
 import com.financemanage.mobile.feature.transaction.di.transactionModule
 import com.financemanage.mobile.feature.wallet.di.walletModule
+import com.financemanage.mobile.navigation.PushViewModel
 import com.financemanage.mobile.platformGoogleWebClientId
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
-import org.koin.core.module.dsl.viewModel
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
 
 private val appModule =
     module {
         single { AuthConfig(googleWebClientId = platformGoogleWebClientId()) }
-        viewModel { AppViewModel(settings = get(), networkMonitor = get(), sessionState = get<SessionManager>().state) }
+        viewModelOf(::AppViewModel)
+        viewModelOf(::PushViewModel)
     }
 
 /** Every Koin module of the app: core, then one per feature. */
@@ -44,6 +46,7 @@ fun appModules(config: ApiConfig): List<Module> =
         networkModule(config),
         dataPlatformModule,
         dataModule,
+        domainModule,
         appModule,
         authModule,
         onboardingModule,

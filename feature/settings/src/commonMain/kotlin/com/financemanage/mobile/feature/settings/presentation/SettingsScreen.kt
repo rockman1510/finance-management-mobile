@@ -45,7 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.settings.ThemeMode
+import com.financemanage.mobile.core.domain.model.ThemeMode
 import com.financemanage.mobile.core.ui.components.ConfirmDialog
 import com.financemanage.mobile.core.ui.components.FinanceScaffold
 import com.financemanage.mobile.core.ui.components.SectionHeader

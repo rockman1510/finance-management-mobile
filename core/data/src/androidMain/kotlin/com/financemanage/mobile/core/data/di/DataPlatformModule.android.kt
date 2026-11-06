@@ -2,12 +2,12 @@ package com.financemanage.mobile.core.data.di
 
 import androidx.room.Room
 import com.financemanage.mobile.core.data.connectivity.AndroidNetworkMonitor
-import com.financemanage.mobile.core.data.connectivity.NetworkMonitor
 import com.financemanage.mobile.core.data.database.DATABASE_FILE_NAME
 import com.financemanage.mobile.core.data.database.FinanceDatabase
 import com.financemanage.mobile.core.data.database.buildFinanceDatabase
 import com.financemanage.mobile.core.data.settings.DATASTORE_FILE_NAME
 import com.financemanage.mobile.core.data.settings.createPreferencesDataStore
+import com.financemanage.mobile.core.domain.repository.NetworkMonitor
 import com.liftric.kvault.KVault
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module

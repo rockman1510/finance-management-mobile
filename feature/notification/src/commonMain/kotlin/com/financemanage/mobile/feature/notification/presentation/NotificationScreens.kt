@@ -42,7 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.push.NotificationLink
+import com.financemanage.mobile.core.domain.model.NotificationLink
 import com.financemanage.mobile.core.model.time.toDisplayString
 import com.financemanage.mobile.core.ui.components.EmptyState
 import com.financemanage.mobile.core.ui.components.ErrorState
@@ -54,7 +54,7 @@ import com.financemanage.mobile.core.ui.components.SectionHeader
 import com.financemanage.mobile.core.ui.error.userMessage
 import com.financemanage.mobile.core.ui.platform.rememberNotificationPermissionController
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.notification.data.NotificationDto
+import com.financemanage.mobile.feature.notification.domain.model.NotificationDto
 import com.financemanage.mobile.feature.notification.presentation.NotificationSettingsViewModel.Companion.DEFAULT_REMINDER_TIME
 import com.financemanage.mobile.feature.notification.resources.Res
 import com.financemanage.mobile.feature.notification.resources.daily_reminder

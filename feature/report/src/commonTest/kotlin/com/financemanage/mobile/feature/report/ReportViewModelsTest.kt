@@ -1,6 +1,8 @@
 package com.financemanage.mobile.feature.report
 
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.testing.MockBackend
 import com.financemanage.mobile.core.testing.SampleJson
@@ -9,7 +11,14 @@ import com.financemanage.mobile.core.testing.keepCollecting
 import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
-import com.financemanage.mobile.feature.report.data.ReportRepository
+import com.financemanage.mobile.feature.report.data.ReportRepositoryImpl
+import com.financemanage.mobile.feature.report.domain.usecase.ExportTransactionsCsvUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetCashFlowUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetCategoryReportUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetDashboardUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetReportSummaryUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.ObserveNetWorthUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.RefreshNetWorthUseCase
 import com.financemanage.mobile.feature.report.presentation.NetWorthViewModel
 import com.financemanage.mobile.feature.report.presentation.PeriodPreset
 import com.financemanage.mobile.feature.report.presentation.ReportsViewModel
@@ -28,8 +37,18 @@ import kotlin.test.assertNull
 class ReportViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = ReportRepository(backend.client, cache)
-    private val profiles = ProfileRepository(backend.client, cache)
+    private val repository = ReportRepositoryImpl(backend.client, cache)
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+
+    private fun reportsViewModel() =
+        ReportsViewModel(
+            GetReportSummaryUseCase(repository),
+            GetCategoryReportUseCase(repository),
+            GetCashFlowUseCase(repository),
+            ExportTransactionsCsvUseCase(repository),
+            GetTodayUseCase(profiles),
+            GetDefaultCurrencyUseCase(profiles),
+        )
 
     private fun stubReports() {
         backend.on(HttpMethod.Get, "reports/summary") { request ->
@@ -62,7 +81,7 @@ class ReportViewModelsTest {
     fun loadsTheMonthDailyAndTheYearMonthly() =
         runViewModelTest {
             stubReports()
-            val viewModel = ReportsViewModel(repository, profiles)
+            val viewModel = reportsViewModel()
             val month = viewModel.state.awaitValue { !it.loading && it.summary != null }
             assertEquals("DAY", month.cashFlow?.granularity)
             assertEquals(1, month.from?.dayOfMonth)
@@ -96,7 +115,7 @@ class ReportViewModelsTest {
                     headersOf(HttpHeaders.ContentType, "text/csv"),
                 )
             }
-            val viewModel = ReportsViewModel(repository, profiles)
+            val viewModel = reportsViewModel()
             val failed = viewModel.state.awaitValue { !it.loading && it.error != null }
             assertEquals("PERIOD_TOO_LONG", (failed.error as AppError.Api).code)
             assertEquals("60", failed.summary?.net?.toStringExpanded())
@@ -118,7 +137,13 @@ class ReportViewModelsTest {
                 """{"asOf":"2026-11-03","currency":"VND","assets":10,"liabilities":4,"netWorth":6}""",
             )
             backend.get("dashboard", """{"activeDeposits":1,"activeLoans":2,"overdueInstallments":1}""")
-            val viewModel = NetWorthViewModel(repository, profiles)
+            val viewModel =
+                NetWorthViewModel(
+                    ObserveNetWorthUseCase(repository),
+                    RefreshNetWorthUseCase(repository),
+                    GetDashboardUseCase(repository),
+                    GetDefaultCurrencyUseCase(profiles),
+                )
             keepCollecting(viewModel.state)
             viewModel.refresh()
             val state = viewModel.state.awaitValue { it.netWorth.data != null && it.dashboard != null }

@@ -3,8 +3,8 @@ package com.financemanage.mobile.core.network
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.AsyncStatus
+import com.financemanage.mobile.core.model.PollResult
 import com.financemanage.mobile.core.network.pending.PendingPoller
-import com.financemanage.mobile.core.network.pending.PollResult
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test

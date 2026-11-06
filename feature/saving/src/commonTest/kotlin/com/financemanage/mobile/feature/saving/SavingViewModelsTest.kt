@@ -1,7 +1,10 @@
 package com.financemanage.mobile.feature.saving
 
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.network.pending.PendingPoller
@@ -12,7 +15,16 @@ import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.ui.components.PendingAction
-import com.financemanage.mobile.feature.saving.data.SavingRepository
+import com.financemanage.mobile.feature.saving.data.SavingRepositoryImpl
+import com.financemanage.mobile.feature.saving.domain.usecase.CreateGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.DeleteGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.GetGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.MoveGoalMoneyUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.ObserveGoalsUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.RefreshGoalsUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.UpdateAutoContributionUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.UpdateGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.UpdateRoundUpUseCase
 import com.financemanage.mobile.feature.saving.presentation.GoalDetailViewModel
 import com.financemanage.mobile.feature.saving.presentation.GoalFormViewModel
 import com.financemanage.mobile.feature.saving.presentation.GoalListViewModel
@@ -43,15 +55,37 @@ private fun movement(status: String) =
 class SavingViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = SavingRepository(backend.client, cache, PendingPoller())
-    private val wallets = WalletRepository(backend.client, cache)
-    private val profiles = ProfileRepository(backend.client, cache)
+    private val repository = SavingRepositoryImpl(backend.client, cache, PendingPoller())
+    private val wallets = WalletRepositoryImpl(backend.client, cache)
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+
+    private fun detailViewModel(id: String) =
+        GoalDetailViewModel(
+            id,
+            GetGoalUseCase(repository),
+            RefreshGoalsUseCase(repository),
+            MoveGoalMoneyUseCase(repository),
+            UpdateAutoContributionUseCase(repository),
+            UpdateRoundUpUseCase(repository),
+            DeleteGoalUseCase(repository),
+            GetCachedWalletsUseCase(wallets),
+            GetTodayUseCase(profiles),
+        )
+
+    private fun formViewModel(id: String?) =
+        GoalFormViewModel(
+            id,
+            GetGoalUseCase(repository),
+            CreateGoalUseCase(repository),
+            UpdateGoalUseCase(repository),
+            GetDefaultCurrencyUseCase(profiles),
+        )
 
     @Test
     fun listIsCached() =
         runViewModelTest {
             backend.get("saving-goals", "[${goalJson()}]")
-            val viewModel = GoalListViewModel(repository)
+            val viewModel = GoalListViewModel(ObserveGoalsUseCase(repository), RefreshGoalsUseCase(repository))
             viewModel.refresh()
             val goal =
                 viewModel.state
@@ -71,7 +105,7 @@ class SavingViewModelsTest {
                 calls++
                 respondJson(if (calls == 1) goalJson() else goalJson(6000000, 60, movement("RECORDED")))
             }
-            val viewModel = GoalDetailViewModel("g1", repository, wallets, profiles)
+            val viewModel = detailViewModel("g1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.goal != null }
 
@@ -98,7 +132,7 @@ class SavingViewModelsTest {
                 HttpStatusCode.UnprocessableEntity,
                 "INSUFFICIENT_SAVINGS",
             )
-            val viewModel = GoalDetailViewModel("g1", repository, wallets, profiles)
+            val viewModel = detailViewModel("g1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.goal != null }
             viewModel.move(deposit = false, amount = BigDecimal.parseString("9000000"), walletId = "w1", date = null)
@@ -114,7 +148,7 @@ class SavingViewModelsTest {
             backend.on(HttpMethod.Put, "saving-goals/g1/auto-contribution") { respondJson(goalJson()) }
             backend.on(HttpMethod.Delete, "saving-goals/g1/auto-contribution") { respondJson(goalJson()) }
             backend.on(HttpMethod.Put, "saving-goals/g1/round-up") { respondJson(goalJson()) }
-            val viewModel = GoalDetailViewModel("g1", repository, wallets, profiles)
+            val viewModel = detailViewModel("g1")
 
             viewModel.setAutoContribution(
                 BigDecimal.parseString("500000"),
@@ -141,7 +175,7 @@ class SavingViewModelsTest {
         runViewModelTest {
             backend.post("saving-goals", goalJson(), HttpStatusCode.Created)
             backend.get("saving-goals", "[${goalJson()}]")
-            val create = GoalFormViewModel(null, repository, profiles)
+            val create = formViewModel(null)
             create.save()
             assertTrue(create.state.value.nameMissing)
             assertTrue(create.state.value.invalidTarget)
@@ -156,7 +190,7 @@ class SavingViewModelsTest {
 
             backend.get("saving-goals/g1", goalJson())
             backend.patch("saving-goals/g1", goalJson(deadline = null))
-            val edit = GoalFormViewModel("g1", repository, profiles)
+            val edit = formViewModel("g1")
             edit.state.awaitValue { it.hadDeadline }
             edit.onDeadline(null)
             edit.save()

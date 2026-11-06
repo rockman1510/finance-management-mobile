@@ -2,13 +2,18 @@ package com.financemanage.mobile.feature.onboarding.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.SetOnboardingCompletedUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.Money
 import com.financemanage.mobile.core.model.domain.WalletType
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.onboarding.data.OnboardingRepository
+import com.financemanage.mobile.feature.onboarding.domain.usecase.CreateFirstWalletUseCase
+import com.financemanage.mobile.feature.onboarding.domain.usecase.CreateMonthlyBudgetUseCase
+import com.financemanage.mobile.feature.onboarding.domain.usecase.SetDefaultCurrencyUseCase
+import com.financemanage.mobile.feature.onboarding.domain.usecase.ShouldSkipOnboardingUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,9 +48,14 @@ data class OnboardingUiState(
  * Steps 3 (budget) and 4 (2FA) can be skipped; skipping 2FA is never asked again.
  */
 class OnboardingViewModel(
-    private val repository: OnboardingRepository,
     defaultWalletName: String,
     defaultBudgetName: String,
+    shouldSkipOnboarding: ShouldSkipOnboardingUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
+    private val setDefaultCurrency: SetDefaultCurrencyUseCase,
+    private val createFirstWallet: CreateFirstWalletUseCase,
+    private val createMonthlyBudget: CreateMonthlyBudgetUseCase,
+    private val setOnboardingCompleted: SetOnboardingCompletedUseCase,
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow(OnboardingUiState(walletName = defaultWalletName, budgetName = defaultBudgetName))
@@ -53,11 +63,11 @@ class OnboardingViewModel(
 
     init {
         viewModelScope.launch {
-            val skip = repository.isCompleted() || (repository.hasWallets() as? AppResult.Success)?.value == true
-            if (skip) {
+            if (shouldSkipOnboarding()) {
                 finish()
             } else {
-                mutableState.update { it.copy(step = OnboardingStep.CURRENCY, currency = repository.defaultCurrency()) }
+                val currency = getDefaultCurrency()
+                mutableState.update { it.copy(step = OnboardingStep.CURRENCY, currency = currency) }
             }
         }
     }
@@ -74,8 +84,7 @@ class OnboardingViewModel(
 
     fun onBudgetAmount(value: String) = mutableState.update { it.copy(budgetAmount = value, amountInvalid = false) }
 
-    fun confirmCurrency() =
-        call(next = OnboardingStep.WALLET) { repository.setDefaultCurrency(mutableState.value.currency) }
+    fun confirmCurrency() = call(next = OnboardingStep.WALLET) { setDefaultCurrency(mutableState.value.currency) }
 
     fun confirmWallet() {
         val current = mutableState.value
@@ -90,7 +99,7 @@ class OnboardingViewModel(
             return
         }
         call(next = OnboardingStep.BUDGET) {
-            repository.createWallet(current.walletName.trim(), current.walletType, Money(balance, current.currency))
+            createFirstWallet(current.walletName.trim(), current.walletType, Money(balance, current.currency))
         }
     }
 
@@ -102,7 +111,7 @@ class OnboardingViewModel(
             return
         }
         call(next = OnboardingStep.SECURITY) {
-            repository.createMonthlyBudget(current.budgetName, Money(amount, current.currency))
+            createMonthlyBudget(current.budgetName, Money(amount, current.currency))
         }
     }
 
@@ -111,7 +120,7 @@ class OnboardingViewModel(
     /** "Skip" and returning from the 2FA flow both end onboarding. */
     fun finish() {
         viewModelScope.launch {
-            repository.markCompleted()
+            setOnboardingCompleted()
             mutableState.update { it.copy(step = OnboardingStep.DONE) }
         }
     }

@@ -18,6 +18,7 @@ class KmpFeatureConventionPlugin : Plugin<Project> {
             extensions.configure<KotlinMultiplatformExtension> {
                 sourceSets.getByName("commonMain").dependencies {
                     implementation(project(":core:model"))
+                    implementation(project(":core:domain"))
                     implementation(project(":core:network"))
                     implementation(project(":core:data"))
                     implementation(project(":core:ui"))

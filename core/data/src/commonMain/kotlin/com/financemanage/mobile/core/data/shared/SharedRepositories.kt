@@ -1,7 +1,17 @@
 package com.financemanage.mobile.core.data.shared
 
-import com.financemanage.mobile.core.data.cache.Cached
 import com.financemanage.mobile.core.data.cache.JsonCache
+import com.financemanage.mobile.core.domain.model.AdjustBalanceRequest
+import com.financemanage.mobile.core.domain.model.Cached
+import com.financemanage.mobile.core.domain.model.ConversionDto
+import com.financemanage.mobile.core.domain.model.CreateWalletRequest
+import com.financemanage.mobile.core.domain.model.UpdateProfileRequest
+import com.financemanage.mobile.core.domain.model.UpdateWalletRequest
+import com.financemanage.mobile.core.domain.model.WalletTotal
+import com.financemanage.mobile.core.domain.repository.CategoryRepository
+import com.financemanage.mobile.core.domain.repository.ExchangeRateRepository
+import com.financemanage.mobile.core.domain.repository.ProfileRepository
+import com.financemanage.mobile.core.domain.repository.WalletRepository
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.Category
@@ -35,21 +45,21 @@ internal inline fun <reified T> io.ktor.client.request.HttpRequestBuilder.json(b
 }
 
 /** The signed-in user's profile (`/me`), cached. */
-class ProfileRepository(
+class ProfileRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
-) {
-    val profile: Flow<Cached<Profile>?> =
+) : ProfileRepository {
+    override val profile: Flow<Cached<Profile>?> =
         cache.observe(KEY, ProfileDto.serializer()).map { it?.let { c -> Cached(c.value.toDomain(), c.updatedAt) } }
 
-    suspend fun current(): Profile? = cache.get(KEY, ProfileDto.serializer())?.value?.toDomain()
+    override suspend fun current(): Profile? = cache.get(KEY, ProfileDto.serializer())?.value?.toDomain()
 
-    suspend fun refresh(): AppResult<Profile> =
+    override suspend fun refresh(): AppResult<Profile> =
         apiCall { client.get(api("me")).body<ProfileDto>() }
             .onSuccess { cache.put(KEY, ProfileDto.serializer(), it) }
             .map { it.toDomain() }
 
-    suspend fun update(request: UpdateProfileRequest): AppResult<Profile> =
+    override suspend fun update(request: UpdateProfileRequest): AppResult<Profile> =
         apiCall { client.patch(api("me")) { json(request) }.body<ProfileDto>() }
             .onSuccess { cache.put(KEY, ProfileDto.serializer(), it) }
             .map { it.toDomain() }
@@ -60,31 +70,31 @@ class ProfileRepository(
 }
 
 /** Wallets (API §5.1). The full list (archived included) is cached; screens filter it. */
-class WalletRepository(
+class WalletRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
-) {
+) : WalletRepository {
     private val listSerializer = ListSerializer(WalletDto.serializer())
 
-    val wallets: Flow<Cached<List<Wallet>>?> =
+    override val wallets: Flow<Cached<List<Wallet>>?> =
         cache.observe(KEY, listSerializer).map { cached ->
             cached?.let { Cached(it.value.map(WalletDto::toDomain), it.updatedAt) }
         }
 
-    suspend fun refresh(): AppResult<List<Wallet>> =
+    override suspend fun refresh(): AppResult<List<Wallet>> =
         apiCall { client.get(api("wallets")) { parameter("includeArchived", true) }.body<List<WalletDto>>() }
             .onSuccess { cache.put(KEY, listSerializer, it) }
             .map { list -> list.map(WalletDto::toDomain) }
 
-    suspend fun get(id: String): AppResult<Wallet> =
+    override suspend fun get(id: String): AppResult<Wallet> =
         apiCall { client.get(api("wallets/$id")).body<WalletDto>() }.map(WalletDto::toDomain)
 
-    suspend fun create(request: CreateWalletRequest): AppResult<Wallet> =
+    override suspend fun create(request: CreateWalletRequest): AppResult<Wallet> =
         apiCall { client.post(api("wallets")) { json(request) }.body<WalletDto>() }
             .onSuccess { refresh() }
             .map(WalletDto::toDomain)
 
-    suspend fun update(
+    override suspend fun update(
         id: String,
         request: UpdateWalletRequest,
     ): AppResult<Wallet> =
@@ -92,13 +102,13 @@ class WalletRepository(
             .onSuccess { refresh() }
             .map(WalletDto::toDomain)
 
-    suspend fun delete(id: String): AppResult<Unit> =
+    override suspend fun delete(id: String): AppResult<Unit> =
         apiCall {
             client.delete(api("wallets/$id"))
             Unit
         }.onSuccess { refresh() }
 
-    suspend fun adjustBalance(
+    override suspend fun adjustBalance(
         id: String,
         request: AdjustBalanceRequest,
     ): AppResult<Unit> =
@@ -107,7 +117,7 @@ class WalletRepository(
             Unit
         }.onSuccess { refresh() }
 
-    suspend fun total(currency: CurrencyCode): AppResult<WalletTotal> =
+    override suspend fun total(currency: CurrencyCode): AppResult<WalletTotal> =
         apiCall {
             client.get(api("wallets/total")) { parameter("currency", currency.value) }.body<WalletTotalDto>()
         }.map { dto -> WalletTotal(money(dto.total, currencyOf(dto.currency ?: currency.value)), dto.missingRates) }
@@ -118,23 +128,23 @@ class WalletRepository(
 }
 
 /** Categories (API §5.2), cached. Parents come before their children. */
-class CategoryRepository(
+class CategoryRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
-) {
+) : CategoryRepository {
     private val listSerializer = ListSerializer(CategoryDto.serializer())
 
-    val categories: Flow<Cached<List<Category>>?> =
+    override val categories: Flow<Cached<List<Category>>?> =
         cache.observe(KEY, listSerializer).map { cached ->
             cached?.let { Cached(it.value.map(CategoryDto::toDomain), it.updatedAt) }
         }
 
-    suspend fun refresh(): AppResult<List<Category>> =
+    override suspend fun refresh(): AppResult<List<Category>> =
         apiCall { client.get(api("categories")).body<List<CategoryDto>>() }
             .onSuccess { cache.put(KEY, listSerializer, it) }
             .map { list -> list.map(CategoryDto::toDomain) }
 
-    suspend fun create(
+    override suspend fun create(
         name: String,
         type: CategoryType,
         parentId: String?,
@@ -148,7 +158,7 @@ class CategoryRepository(
                 .body<CategoryDto>()
         }.onSuccess { refresh() }.map(CategoryDto::toDomain)
 
-    suspend fun update(
+    override suspend fun update(
         id: String,
         name: String?,
         icon: String?,
@@ -157,7 +167,7 @@ class CategoryRepository(
             .onSuccess { refresh() }
             .map(CategoryDto::toDomain)
 
-    suspend fun delete(id: String): AppResult<Unit> =
+    override suspend fun delete(id: String): AppResult<Unit> =
         apiCall {
             client.delete(api("categories/$id"))
             Unit
@@ -169,23 +179,23 @@ class CategoryRepository(
 }
 
 /** Exchange rates and conversion (API §6). */
-class ExchangeRateRepository(
+class ExchangeRateRepositoryImpl(
     private val client: HttpClient,
     private val cache: JsonCache,
-) {
+) : ExchangeRateRepository {
     private val listSerializer = ListSerializer(ExchangeRateDto.serializer())
 
-    val rates: Flow<Cached<List<ExchangeRate>>?> =
+    override val rates: Flow<Cached<List<ExchangeRate>>?> =
         cache.observe(KEY, listSerializer).map { cached ->
             cached?.let { Cached(it.value.map(ExchangeRateDto::toDomain), it.updatedAt) }
         }
 
-    suspend fun refresh(): AppResult<List<ExchangeRate>> =
+    override suspend fun refresh(): AppResult<List<ExchangeRate>> =
         apiCall { client.get(api("exchange-rates")).body<List<ExchangeRateDto>>() }
             .onSuccess { cache.put(KEY, listSerializer, it) }
             .map { list -> list.map(ExchangeRateDto::toDomain) }
 
-    suspend fun save(
+    override suspend fun save(
         base: CurrencyCode,
         quote: CurrencyCode,
         rate: BigDecimal,
@@ -198,13 +208,13 @@ class ExchangeRateRepository(
             Unit
         }.onSuccess { refresh() }
 
-    suspend fun delete(id: String): AppResult<Unit> =
+    override suspend fun delete(id: String): AppResult<Unit> =
         apiCall {
             client.delete(api("exchange-rates/$id"))
             Unit
         }.onSuccess { refresh() }
 
-    suspend fun convert(
+    override suspend fun convert(
         amount: BigDecimal,
         from: CurrencyCode,
         to: CurrencyCode,

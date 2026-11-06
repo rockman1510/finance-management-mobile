@@ -2,32 +2,37 @@ package com.financemanage.mobile.feature.budget.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.push.PushBridge
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.usecase.GetCachedCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.RequestNotificationPermissionUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.CategoryType
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toPlainString
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.budget.data.Budget
-import com.financemanage.mobile.feature.budget.data.BudgetPeriod
-import com.financemanage.mobile.feature.budget.data.BudgetRepository
-import com.financemanage.mobile.feature.budget.data.BudgetTransactionDto
-import com.financemanage.mobile.feature.budget.data.CreateBudgetRequest
-import com.financemanage.mobile.feature.budget.data.UpdateBudgetRequest
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.budget.domain.model.Budget
+import com.financemanage.mobile.feature.budget.domain.model.BudgetPeriod
+import com.financemanage.mobile.feature.budget.domain.model.BudgetTransactionDto
+import com.financemanage.mobile.feature.budget.domain.model.CreateBudgetRequest
+import com.financemanage.mobile.feature.budget.domain.model.UpdateBudgetRequest
+import com.financemanage.mobile.feature.budget.domain.usecase.CreateBudgetUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.DeleteBudgetUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.GetBudgetTransactionsUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.GetBudgetUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.ObserveBudgetsUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.RefreshBudgetsUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.UpdateBudgetUseCase
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
@@ -36,9 +41,10 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 
 class BudgetListViewModel(
-    private val repository: BudgetRepository,
+    observeBudgets: ObserveBudgetsUseCase,
+    refreshBudgets: RefreshBudgetsUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.budgets) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeBudgets()) { refreshBudgets() }
     val state: StateFlow<Resource<List<Budget>>> = holder.state
 
     fun refresh() = holder.refresh()
@@ -56,8 +62,10 @@ data class BudgetDetailUiState(
 
 class BudgetDetailViewModel(
     private val id: String,
-    private val repository: BudgetRepository,
-    private val categories: CategoryRepository,
+    private val getBudget: GetBudgetUseCase,
+    private val getBudgetTransactions: GetBudgetTransactionsUseCase,
+    private val deleteBudget: DeleteBudgetUseCase,
+    getCachedCategories: GetCachedCategoriesUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(BudgetDetailUiState())
     val state: StateFlow<BudgetDetailUiState> = mutableState.asStateFlow()
@@ -66,11 +74,7 @@ class BudgetDetailViewModel(
         viewModelScope.launch {
             mutableState.update {
                 it.copy(
-                    categories =
-                        categories.categories
-                            .first()
-                            ?.value
-                            .orEmpty(),
+                    categories = getCachedCategories(),
                 )
             }
         }
@@ -95,9 +99,9 @@ class BudgetDetailViewModel(
     private fun load(date: LocalDate?) {
         mutableState.update { it.copy(loading = true, date = date) }
         viewModelScope.launch {
-            when (val result = repository.get(id, date)) {
+            when (val result = getBudget(id, date)) {
                 is AppResult.Success -> {
-                    val transactions = (repository.transactions(result.value) as? AppResult.Success)?.value.orEmpty()
+                    val transactions = (getBudgetTransactions(result.value) as? AppResult.Success)?.value.orEmpty()
                     mutableState.update {
                         it.copy(
                             budget = result.value,
@@ -114,7 +118,7 @@ class BudgetDetailViewModel(
 
     fun delete() {
         viewModelScope.launch {
-            val result = repository.delete(id)
+            val result = deleteBudget(id)
             mutableState.update {
                 it.copy(
                     deleted = result is AppResult.Success,
@@ -148,36 +152,38 @@ data class BudgetFormUiState(
 
 class BudgetFormViewModel(
     private val id: String?,
-    private val repository: BudgetRepository,
-    categories: CategoryRepository,
-    wallets: WalletRepository,
-    profiles: ProfileRepository,
+    getBudget: GetBudgetUseCase,
+    private val createBudget: CreateBudgetUseCase,
+    private val updateBudget: UpdateBudgetUseCase,
+    getCachedCategories: GetCachedCategoriesUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
+    getToday: GetTodayUseCase,
+    private val requestNotificationPermission: RequestNotificationPermissionUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(BudgetFormUiState(isEdit = id != null))
     val state: StateFlow<BudgetFormUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val profile = profiles.current()
+            val currency = getDefaultCurrency()
+            val today = getToday()
+            val categoryList = getCachedCategories()
+            val walletList = getCachedWallets()
             mutableState.update {
                 it.copy(
-                    currency = profile?.defaultCurrency ?: CurrencyCode.DEFAULT,
-                    startDate = today(profile?.timeZone),
+                    currency = currency,
+                    startDate = today,
                     categories =
-                        categories.categories.first()?.value.orEmpty().filter { c ->
+                        categoryList.filter { c ->
                             c.type ==
                                 CategoryType.EXPENSE
                         },
-                    wallets =
-                        wallets.wallets
-                            .first()
-                            ?.value
-                            .orEmpty()
-                            .filter { w -> !w.archived },
+                    wallets = walletList.filter { w -> !w.archived },
                 )
             }
             if (id != null) {
-                (repository.get(id, null) as? AppResult.Success)?.value?.let { budget ->
+                (getBudget(id, null) as? AppResult.Success)?.value?.let { budget ->
                     mutableState.update {
                         it.copy(
                             name = budget.name,
@@ -244,7 +250,7 @@ class BudgetFormViewModel(
         viewModelScope.launch {
             val result =
                 if (id == null) {
-                    repository.create(
+                    createBudget(
                         CreateBudgetRequest(
                             name = form.name.trim(),
                             amount = amount,
@@ -258,7 +264,7 @@ class BudgetFormViewModel(
                         ),
                     )
                 } else {
-                    repository.update(
+                    updateBudget(
                         id,
                         UpdateBudgetRequest(
                             name = form.name.trim(),
@@ -271,7 +277,7 @@ class BudgetFormViewModel(
                     )
                 }
             // Ask for the notification permission after the first budget / bill (F20; asked once).
-            if (id == null && result is AppResult.Success) PushBridge.requestPermission()
+            if (id == null && result is AppResult.Success) requestNotificationPermission()
             mutableState.update {
                 it.copy(
                     saving = false,

@@ -1,8 +1,14 @@
 package com.financemanage.mobile.feature.budget
 
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.push.PushRepositoryImpl
+import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetCachedCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.RequestNotificationPermissionUseCase
 import com.financemanage.mobile.core.testing.MockBackend
 import com.financemanage.mobile.core.testing.SampleJson
 import com.financemanage.mobile.core.testing.awaitValue
@@ -11,9 +17,16 @@ import com.financemanage.mobile.core.testing.bodyJson
 import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
-import com.financemanage.mobile.feature.budget.data.BudgetPeriod
-import com.financemanage.mobile.feature.budget.data.BudgetRepository
-import com.financemanage.mobile.feature.budget.data.BudgetState
+import com.financemanage.mobile.feature.budget.data.BudgetRepositoryImpl
+import com.financemanage.mobile.feature.budget.domain.model.BudgetPeriod
+import com.financemanage.mobile.feature.budget.domain.model.BudgetState
+import com.financemanage.mobile.feature.budget.domain.usecase.CreateBudgetUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.DeleteBudgetUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.GetBudgetTransactionsUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.GetBudgetUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.ObserveBudgetsUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.RefreshBudgetsUseCase
+import com.financemanage.mobile.feature.budget.domain.usecase.UpdateBudgetUseCase
 import com.financemanage.mobile.feature.budget.presentation.BudgetDetailViewModel
 import com.financemanage.mobile.feature.budget.presentation.BudgetFormViewModel
 import com.financemanage.mobile.feature.budget.presentation.BudgetListViewModel
@@ -38,14 +51,29 @@ private fun budgetJson(
 class BudgetViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = BudgetRepository(backend.client, cache)
-    private val categories = CategoryRepository(backend.client, cache)
+    private val repository = BudgetRepositoryImpl(backend.client, cache)
+    private val categories = CategoryRepositoryImpl(backend.client, cache)
+
+    private fun formViewModel(id: String?): BudgetFormViewModel {
+        val profiles = ProfileRepositoryImpl(backend.client, cache)
+        return BudgetFormViewModel(
+            id,
+            GetBudgetUseCase(repository),
+            CreateBudgetUseCase(repository),
+            UpdateBudgetUseCase(repository),
+            GetCachedCategoriesUseCase(categories),
+            GetCachedWalletsUseCase(WalletRepositoryImpl(backend.client, cache)),
+            GetDefaultCurrencyUseCase(profiles),
+            GetTodayUseCase(profiles),
+            RequestNotificationPermissionUseCase(PushRepositoryImpl()),
+        )
+    }
 
     @Test
     fun listMapsTheCurrentPeriod() =
         runViewModelTest {
             backend.get("budgets", "[${budgetJson()}]")
-            val viewModel = BudgetListViewModel(repository)
+            val viewModel = BudgetListViewModel(ObserveBudgetsUseCase(repository), RefreshBudgetsUseCase(repository))
             viewModel.refresh()
             val budget =
                 viewModel.state
@@ -85,7 +113,14 @@ class BudgetViewModelsTest {
                 """{"items":[{"id":"t1","type":"EXPENSE","amount":45000,"currency":"VND","categoryId":"food",
                 "occurredOn":"2026-11-01"}],"page":0,"totalPages":1}""",
             )
-            val viewModel = BudgetDetailViewModel("b1", repository, categories)
+            val viewModel =
+                BudgetDetailViewModel(
+                    "b1",
+                    GetBudgetUseCase(repository),
+                    GetBudgetTransactionsUseCase(repository),
+                    DeleteBudgetUseCase(repository),
+                    GetCachedCategoriesUseCase(categories),
+                )
             viewModel.refresh()
             val current = viewModel.state.awaitValue { it.budget != null && !it.loading }
             assertEquals(1, current.transactions.size)
@@ -119,17 +154,11 @@ class BudgetViewModelsTest {
     fun formValidatesCustomPeriodsAndCreates() =
         runViewModelTest {
             backend.get("me", SampleJson.ME)
-            ProfileRepository(backend.client, cache).refresh()
+            ProfileRepositoryImpl(backend.client, cache).refresh()
             backend.post("budgets", budgetJson(), HttpStatusCode.Created)
             backend.get("budgets", "[${budgetJson()}]")
             val viewModel =
-                BudgetFormViewModel(
-                    null,
-                    repository,
-                    categories,
-                    WalletRepository(backend.client, cache),
-                    ProfileRepository(backend.client, cache),
-                )
+                formViewModel(null)
             viewModel.state.awaitValue { it.startDate != null }
 
             viewModel.onPeriod(BudgetPeriod.CUSTOM)
@@ -166,13 +195,7 @@ class BudgetViewModelsTest {
             backend.patch("budgets/b1", budgetJson())
             backend.get("budgets", "[${budgetJson()}]")
             val viewModel =
-                BudgetFormViewModel(
-                    "b1",
-                    repository,
-                    categories,
-                    WalletRepository(backend.client, cache),
-                    ProfileRepository(backend.client, cache),
-                )
+                formViewModel("b1")
             val loaded = viewModel.state.awaitValue { it.name.isNotEmpty() }
             assertEquals("3000000", loaded.amount)
             assertEquals(setOf("food"), loaded.categoryIds)

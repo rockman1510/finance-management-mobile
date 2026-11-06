@@ -1,7 +1,10 @@
 package com.financemanage.mobile.feature.notification
 
 import com.financemanage.mobile.core.data.push.PushBridge
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.data.push.PushRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetCachedProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePushReceivedUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.testing.MockBackend
 import com.financemanage.mobile.core.testing.SampleJson
@@ -12,8 +15,14 @@ import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.testing.tracked
-import com.financemanage.mobile.feature.notification.data.NotificationDto
-import com.financemanage.mobile.feature.notification.data.NotificationRepository
+import com.financemanage.mobile.feature.notification.data.NotificationRepositoryImpl
+import com.financemanage.mobile.feature.notification.domain.model.NotificationDto
+import com.financemanage.mobile.feature.notification.domain.usecase.GetNotificationPreferencesUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.MarkAllNotificationsReadUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.MarkNotificationReadUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.ObserveNotificationsUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.RefreshNotificationsUseCase
+import com.financemanage.mobile.feature.notification.domain.usecase.SaveNotificationPreferencesUseCase
 import com.financemanage.mobile.feature.notification.presentation.NotificationSettingsViewModel
 import com.financemanage.mobile.feature.notification.presentation.NotificationsViewModel
 import com.financemanage.mobile.feature.notification.presentation.groupByDay
@@ -42,8 +51,24 @@ private const val PREFS =
 class NotificationViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = NotificationRepository(backend.client, cache)
-    private val profiles = ProfileRepository(backend.client, cache)
+    private val repository = NotificationRepositoryImpl(backend.client, cache)
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+
+    private fun notificationsViewModel() =
+        NotificationsViewModel(
+            ObserveNotificationsUseCase(repository),
+            RefreshNotificationsUseCase(repository),
+            MarkNotificationReadUseCase(repository),
+            MarkAllNotificationsReadUseCase(repository),
+            GetCachedProfileUseCase(profiles),
+            ObservePushReceivedUseCase(PushRepositoryImpl()),
+        )
+
+    private fun settingsViewModel() =
+        NotificationSettingsViewModel(
+            GetNotificationPreferencesUseCase(repository),
+            SaveNotificationPreferencesUseCase(repository),
+        )
 
     @Test
     fun groupsByLocalDay() {
@@ -67,7 +92,7 @@ class NotificationViewModelsTest {
             profiles.refresh()
             backend.get("notifications", LIST)
             backend.post("notifications/n1/read", "", HttpStatusCode.NoContent)
-            val viewModel = NotificationsViewModel(repository, profiles).tracked()
+            val viewModel = notificationsViewModel().tracked()
             viewModel.refresh()
             val loaded = viewModel.state.awaitValue { it.days.data != null }
             assertEquals(2, loaded.unreadCount)
@@ -96,7 +121,7 @@ class NotificationViewModelsTest {
         runViewModelTest {
             backend.get("notifications", LIST)
             backend.post("notifications/read-all", "", HttpStatusCode.NoContent)
-            val viewModel = NotificationsViewModel(repository, profiles).tracked()
+            val viewModel = notificationsViewModel().tracked()
             viewModel.refresh()
             viewModel.state.awaitValue { it.unreadCount == 2 }
 
@@ -113,7 +138,7 @@ class NotificationViewModelsTest {
         runViewModelTest {
             backend.get("notifications", LIST)
             backend.offline(HttpMethod.Post, "notifications/read-all")
-            val viewModel = NotificationsViewModel(repository, profiles).tracked()
+            val viewModel = notificationsViewModel().tracked()
             viewModel.refresh()
             viewModel.state.awaitValue { it.unreadCount == 2 }
             viewModel.markAllRead()
@@ -130,7 +155,7 @@ class NotificationViewModelsTest {
             backend.on(HttpMethod.Put, "notifications/preferences") { request ->
                 respondJson(request.bodyJson().toString())
             }
-            val viewModel = NotificationSettingsViewModel(repository)
+            val viewModel = settingsViewModel()
             viewModel.state.awaitValue { it.preferences != null }
 
             viewModel.setTypeEnabled("BUDGET_WARNING", true)
@@ -165,7 +190,7 @@ class NotificationViewModelsTest {
         runViewModelTest {
             backend.get("notifications/preferences", PREFS)
             backend.fail(HttpMethod.Put, "notifications/preferences", HttpStatusCode.BadRequest, "VALIDATION_FAILED")
-            val viewModel = NotificationSettingsViewModel(repository)
+            val viewModel = settingsViewModel()
             viewModel.state.awaitValue { it.preferences != null }
             viewModel.setTypeEnabled("BILL_DUE", false)
             val failed = viewModel.state.awaitValue { it.saveError != null }

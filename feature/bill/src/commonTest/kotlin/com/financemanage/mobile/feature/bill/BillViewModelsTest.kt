@@ -1,8 +1,13 @@
 package com.financemanage.mobile.feature.bill
 
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.push.PushRepositoryImpl
+import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetCachedCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.RequestNotificationPermissionUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.network.pending.PendingPoller
 import com.financemanage.mobile.core.testing.MockBackend
@@ -15,7 +20,15 @@ import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.ui.components.PendingAction
-import com.financemanage.mobile.feature.bill.data.BillRepository
+import com.financemanage.mobile.feature.bill.data.BillRepositoryImpl
+import com.financemanage.mobile.feature.bill.domain.usecase.CreateBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.DeleteBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.GetBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.ObserveBillsUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.PayBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.RefreshBillsUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.SkipBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.UpdateBillUseCase
 import com.financemanage.mobile.feature.bill.presentation.BillDetailViewModel
 import com.financemanage.mobile.feature.bill.presentation.BillFormViewModel
 import com.financemanage.mobile.feature.bill.presentation.BillListViewModel
@@ -45,9 +58,21 @@ private fun billJson(
 class BillViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = BillRepository(backend.client, cache, PendingPoller())
-    private val wallets = WalletRepository(backend.client, cache)
-    private val categories = CategoryRepository(backend.client, cache)
+    private val repository = BillRepositoryImpl(backend.client, cache, PendingPoller())
+    private val wallets = WalletRepositoryImpl(backend.client, cache)
+    private val categories = CategoryRepositoryImpl(backend.client, cache)
+
+    private fun detailViewModel(id: String) =
+        BillDetailViewModel(
+            id,
+            GetBillUseCase(repository),
+            PayBillUseCase(repository),
+            SkipBillUseCase(repository),
+            UpdateBillUseCase(repository),
+            DeleteBillUseCase(repository),
+            GetCachedWalletsUseCase(wallets),
+            GetCachedCategoriesUseCase(categories),
+        )
 
     @Test
     fun dueSoonFollowsTheReminderDays() =
@@ -68,7 +93,12 @@ class BillViewModelsTest {
                 polls++
                 respondJson(billJson(if (polls < 2) "PENDING" else "RECORDED"))
             }
-            val viewModel = BillListViewModel(repository)
+            val viewModel =
+                BillListViewModel(
+                    ObserveBillsUseCase(repository),
+                    RefreshBillsUseCase(repository),
+                    PayBillUseCase(repository),
+                )
             keepCollecting(viewModel.state)
             viewModel.refresh()
             val bill =
@@ -94,7 +124,7 @@ class BillViewModelsTest {
             backend.get("bills/b1", billJson("FAILED", "Ví đã lưu trữ"))
             backend.post("bills/b1/pay", """{"id":"p1","status":"PENDING"}""", HttpStatusCode.Accepted)
             backend.get("bills", "[${billJson()}]")
-            val viewModel = BillDetailViewModel("b1", repository, wallets, categories)
+            val viewModel = detailViewModel("b1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.bill != null }
 
@@ -110,7 +140,7 @@ class BillViewModelsTest {
             backend.get("bills/b1", billJson("PENDING"))
             backend.post("bills/b1/pay", """{"id":"p1","status":"PENDING"}""", HttpStatusCode.Accepted)
             backend.get("bills", "[${billJson()}]")
-            val viewModel = BillDetailViewModel("b1", repository, wallets, categories)
+            val viewModel = detailViewModel("b1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.bill != null }
             viewModel.pay(null, null, null)
@@ -122,7 +152,7 @@ class BillViewModelsTest {
         runViewModelTest {
             backend.get("bills/b1", billJson())
             backend.fail(HttpMethod.Post, "bills/b1/pay", HttpStatusCode.UnprocessableEntity, "BILL_INACTIVE")
-            val viewModel = BillDetailViewModel("b1", repository, wallets, categories)
+            val viewModel = detailViewModel("b1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.bill != null }
             viewModel.pay(null, null, null)
@@ -139,7 +169,7 @@ class BillViewModelsTest {
             backend.post("bills/b1/skip", "", HttpStatusCode.NoContent)
             backend.patch("bills/b1", billJson())
             backend.delete("bills/b1")
-            val viewModel = BillDetailViewModel("b1", repository, wallets, categories)
+            val viewModel = detailViewModel("b1")
             viewModel.skip()
             backend.await(HttpMethod.Post, "bills/b1/skip")
             viewModel.state.awaitValue { !it.busy }
@@ -164,7 +194,16 @@ class BillViewModelsTest {
             backend.post("bills", billJson(), HttpStatusCode.Created)
             backend.get("bills", "[${billJson()}]")
             val viewModel =
-                BillFormViewModel(null, repository, wallets, categories, ProfileRepository(backend.client, cache))
+                BillFormViewModel(
+                    null,
+                    GetBillUseCase(repository),
+                    CreateBillUseCase(repository),
+                    UpdateBillUseCase(repository),
+                    GetCachedWalletsUseCase(wallets),
+                    GetCachedCategoriesUseCase(categories),
+                    GetTodayUseCase(ProfileRepositoryImpl(backend.client, cache)),
+                    RequestNotificationPermissionUseCase(PushRepositoryImpl()),
+                )
             val loaded = viewModel.state.awaitValue { it.walletId != null && it.firstDueDate != null }
             assertEquals(listOf("elec"), loaded.categories.map { it.id })
 

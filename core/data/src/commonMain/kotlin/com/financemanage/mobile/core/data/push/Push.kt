@@ -2,8 +2,10 @@ package com.financemanage.mobile.core.data.push
 
 import com.financemanage.mobile.core.data.platform.deviceName
 import com.financemanage.mobile.core.data.platform.platformName
-import com.financemanage.mobile.core.data.session.SessionState
 import com.financemanage.mobile.core.data.session.SignOutHook
+import com.financemanage.mobile.core.domain.model.NotificationLink
+import com.financemanage.mobile.core.domain.model.SessionState
+import com.financemanage.mobile.core.domain.repository.PushRepository
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.network.api
 import com.financemanage.mobile.core.network.error.apiCall
@@ -26,35 +28,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-
-/**
- * Where a notification points to (API §14): `referenceType` (`BILL`, `BUDGET`, `SAVING_GOAL`, `DEPOSIT`, `LOAN`) and
- * `referenceId`. Both are null for `DAILY_REMINDER` (→ Quick add).
- */
-data class NotificationLink(
-    val referenceType: String?,
-    val referenceId: String?,
-) {
-    companion object {
-        private const val SCHEME = "financemanage://"
-
-        /** Parses `financemanage://<referenceType>/<id>` (also `financemanage://quick-add`). */
-        fun parse(url: String): NotificationLink? {
-            if (!url.startsWith(SCHEME, ignoreCase = true)) return null
-            val parts =
-                url
-                    .substring(SCHEME.length)
-                    .trim('/')
-                    .split('/')
-                    .filter { it.isNotBlank() }
-            val type = parts.getOrNull(0)?.uppercase()?.replace('-', '_')
-            return when {
-                type == null || type == "QUICK_ADD" -> NotificationLink(null, null)
-                else -> NotificationLink(type, parts.getOrNull(1))
-            }
-        }
-    }
-}
 
 /**
  * Bridge between the platform push SDK (FCM on Android, the Firebase iOS SDK called from Swift) and the shared code.
@@ -109,6 +82,17 @@ object PushBridge {
     fun consumeOpened(link: NotificationLink) {
         mutableOpened.compareAndSet(link, null)
     }
+}
+
+/** [PushRepository] backed by the process-wide [PushBridge]. */
+class PushRepositoryImpl : PushRepository {
+    override val opened: StateFlow<NotificationLink?> get() = PushBridge.opened
+    override val received: Flow<Unit> get() = PushBridge.received
+    override val permissionRequests: Flow<Unit> get() = PushBridge.permissionRequests
+
+    override fun consumeOpened(link: NotificationLink) = PushBridge.consumeOpened(link)
+
+    override fun requestPermission() = PushBridge.requestPermission()
 }
 
 @Serializable

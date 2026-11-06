@@ -2,28 +2,43 @@ package com.financemanage.mobile.feature.transaction.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.outbox.OutboxEntity
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ExchangeRateRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.model.PendingWrite
+import com.financemanage.mobile.core.domain.usecase.ConvertCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.DiscardPendingWriteUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.GetWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePendingWritesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.RetryPendingWriteUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
+import com.financemanage.mobile.core.model.IdempotencyKeyHolder
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toPlainString
-import com.financemanage.mobile.core.network.IdempotencyKeyHolder
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.transaction.data.TransactionRepository
-import com.financemanage.mobile.feature.transaction.data.TransferRequest
-import com.financemanage.mobile.feature.transaction.data.UpdateRecurringRequest
-import com.financemanage.mobile.feature.transaction.data.WriteOutcome
-import com.financemanage.mobile.feature.transaction.domain.Attachment
-import com.financemanage.mobile.feature.transaction.domain.Recurring
-import com.financemanage.mobile.feature.transaction.domain.Transaction
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.transaction.domain.model.Attachment
+import com.financemanage.mobile.feature.transaction.domain.model.Recurring
+import com.financemanage.mobile.feature.transaction.domain.model.Transaction
+import com.financemanage.mobile.feature.transaction.domain.model.TransferRequest
+import com.financemanage.mobile.feature.transaction.domain.model.UpdateRecurringRequest
+import com.financemanage.mobile.feature.transaction.domain.model.WriteOutcome
+import com.financemanage.mobile.feature.transaction.domain.usecase.CreateTransferUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteReceiptUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteRecurringUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteTransactionOrTransferUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.DownloadReceiptUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.GetRecurringUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.GetTransactionUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.ObserveRecurringUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.RefreshRecurringUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.UpdateRecurringUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.UploadReceiptUseCase
 import com.financemanage.mobile.feature.transaction.platform.PickedFile
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +46,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -55,9 +69,13 @@ data class TransactionDetailUiState(
 
 class TransactionDetailViewModel(
     private val transactionId: String,
-    private val repository: TransactionRepository,
-    private val wallets: WalletRepository,
-    private val categories: CategoryRepository,
+    private val getTransaction: GetTransactionUseCase,
+    private val downloadReceipt: DownloadReceiptUseCase,
+    private val uploadReceipt: UploadReceiptUseCase,
+    private val deleteReceipt: DeleteReceiptUseCase,
+    private val deleteTransactionOrTransfer: DeleteTransactionOrTransferUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getCachedCategories: GetCachedCategoriesUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(TransactionDetailUiState())
     val state: StateFlow<TransactionDetailUiState> = mutableState.asStateFlow()
@@ -66,16 +84,8 @@ class TransactionDetailViewModel(
         viewModelScope.launch {
             mutableState.update {
                 it.copy(
-                    wallets =
-                        wallets.wallets
-                            .first()
-                            ?.value
-                            .orEmpty(),
-                    categories =
-                        categories.categories
-                            .first()
-                            ?.value
-                            .orEmpty(),
+                    wallets = getCachedWallets(),
+                    categories = getCachedCategories(),
                 )
             }
         }
@@ -83,7 +93,7 @@ class TransactionDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            when (val result = repository.get(transactionId)) {
+            when (val result = getTransaction(transactionId)) {
                 is AppResult.Success -> {
                     mutableState.update { it.copy(transaction = result.value, loading = false, error = null) }
                     loadImages(result.value.attachments)
@@ -95,19 +105,19 @@ class TransactionDetailViewModel(
 
     private suspend fun loadImages(attachments: List<Attachment>) {
         attachments.filter { it.isImage && it.id !in mutableState.value.images }.forEach { attachment ->
-            (repository.downloadAttachment(attachment.id) as? AppResult.Success)?.let { result ->
+            (downloadReceipt(attachment.id) as? AppResult.Success)?.let { result ->
                 mutableState.update { it.copy(images = it.images + (attachment.id to result.value)) }
             }
         }
     }
 
     suspend fun download(attachment: Attachment): ByteArray? =
-        (repository.downloadAttachment(attachment.id) as? AppResult.Success)?.value
+        (downloadReceipt(attachment.id) as? AppResult.Success)?.value
 
     fun upload(file: PickedFile) {
         mutableState.update { it.copy(uploading = true, error = null) }
         viewModelScope.launch {
-            val result = repository.uploadAttachment(transactionId, file.bytes, file.fileName, file.contentType)
+            val result = uploadReceipt(transactionId, file.bytes, file.fileName, file.contentType)
             mutableState.update { it.copy(uploading = false, error = (result as? AppResult.Failure)?.error) }
             refresh()
         }
@@ -115,7 +125,7 @@ class TransactionDetailViewModel(
 
     fun deleteAttachment(attachment: Attachment) {
         viewModelScope.launch {
-            val result = repository.deleteAttachment(attachment.id)
+            val result = deleteReceipt(attachment.id)
             mutableState.update { it.copy(error = (result as? AppResult.Failure)?.error) }
             refresh()
         }
@@ -124,15 +134,7 @@ class TransactionDetailViewModel(
     fun delete() {
         val transaction = mutableState.value.transaction ?: return
         viewModelScope.launch {
-            val transferId = transaction.transferId
-            val result =
-                if (transferId !=
-                    null
-                ) {
-                    repository.deleteTransfer(transferId)
-                } else {
-                    repository.delete(transaction.id)
-                }
+            val result = deleteTransactionOrTransfer(transaction)
             mutableState.update {
                 it.copy(
                     deleted = result is AppResult.Success,
@@ -168,10 +170,10 @@ data class TransferUiState(
 }
 
 class TransferViewModel(
-    private val repository: TransactionRepository,
-    private val wallets: WalletRepository,
-    private val rates: ExchangeRateRepository,
-    private val profiles: ProfileRepository,
+    private val createTransfer: CreateTransferUseCase,
+    private val convertCurrency: ConvertCurrencyUseCase,
+    getWallets: GetWalletsUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(TransferUiState())
     val state: StateFlow<TransferUiState> = mutableState.asStateFlow()
@@ -179,17 +181,14 @@ class TransferViewModel(
 
     init {
         viewModelScope.launch {
-            val list =
-                (wallets.wallets.first()?.value ?: (wallets.refresh() as? AppResult.Success)?.value.orEmpty())
-                    .filter {
-                        !it.archived
-                    }
+            val list = getWallets().filter { !it.archived }
+            val today = getToday()
             mutableState.update {
                 it.copy(
                     wallets = list,
                     fromId = list.getOrNull(0)?.id,
                     toId = list.getOrNull(1)?.id,
-                    date = today(profiles.current()?.timeZone),
+                    date = today,
                 )
             }
         }
@@ -222,7 +221,7 @@ class TransferViewModel(
         viewModelScope.launch {
             val conversion =
                 (
-                    rates.convert(
+                    convertCurrency(
                         amount,
                         from.currency,
                         to.currency,
@@ -267,7 +266,7 @@ class TransferViewModel(
             val request =
                 TransferRequest(from.id, to.id, amount, received, form.date, form.note.trim().ifEmpty { null })
             val summary = "${from.name} → ${to.name} · ${form.amount} ${from.currency.value}"
-            when (val result = repository.transfer(request, idempotency.current(), summary)) {
+            when (val result = createTransfer(request, idempotency.current(), summary)) {
                 is AppResult.Success ->
                     mutableState.update {
                         it.copy(
@@ -292,19 +291,19 @@ data class RecurringListUiState(
 )
 
 class RecurringListViewModel(
-    private val repository: TransactionRepository,
-    wallets: WalletRepository,
-    categories: CategoryRepository,
+    observeRecurring: ObserveRecurringUseCase,
+    refreshRecurring: RefreshRecurringUseCase,
+    private val updateRecurring: UpdateRecurringUseCase,
+    observeWallets: ObserveWalletsUseCase,
+    observeCategories: ObserveCategoriesUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.recurring) { repository.refreshRecurring() }
+    private val holder = ResourceHolder(viewModelScope, observeRecurring()) { refreshRecurring() }
 
     val state: StateFlow<RecurringListUiState> =
         combine(
             holder.state,
-            wallets.wallets.map {
-                it?.value.orEmpty()
-            },
-            categories.categories.map { it?.value.orEmpty() },
+            observeWallets().map { it?.value.orEmpty() },
+            observeCategories().map { it?.value.orEmpty() },
         ) { items, w, c ->
             RecurringListUiState(items, w, c)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), RecurringListUiState())
@@ -315,7 +314,7 @@ class RecurringListViewModel(
         item: Recurring,
         active: Boolean,
     ) {
-        viewModelScope.launch { repository.updateRecurring(item.id, UpdateRecurringRequest(active = active)) }
+        viewModelScope.launch { updateRecurring(item.id, UpdateRecurringRequest(active = active)) }
     }
 }
 
@@ -337,27 +336,20 @@ data class RecurringEditUiState(
 
 class RecurringEditViewModel(
     private val id: String,
-    private val repository: TransactionRepository,
-    private val wallets: WalletRepository,
-    private val categories: CategoryRepository,
+    private val getRecurring: GetRecurringUseCase,
+    private val updateRecurring: UpdateRecurringUseCase,
+    private val deleteRecurring: DeleteRecurringUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getCachedCategories: GetCachedCategoriesUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(RecurringEditUiState())
     val state: StateFlow<RecurringEditUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val walletList =
-                wallets.wallets
-                    .first()
-                    ?.value
-                    .orEmpty()
-                    .filter { !it.archived }
-            val categoryList =
-                categories.categories
-                    .first()
-                    ?.value
-                    .orEmpty()
-            when (val result = repository.getRecurring(id)) {
+            val walletList = getCachedWallets().filter { !it.archived }
+            val categoryList = getCachedCategories()
+            when (val result = getRecurring(id)) {
                 is AppResult.Success -> {
                     val item = result.value
                     mutableState.update {
@@ -405,7 +397,7 @@ class RecurringEditViewModel(
         mutableState.update { it.copy(saving = true) }
         viewModelScope.launch {
             val result =
-                repository.updateRecurring(
+                updateRecurring(
                     id,
                     UpdateRecurringRequest(
                         form.walletId,
@@ -429,7 +421,7 @@ class RecurringEditViewModel(
 
     fun delete() {
         viewModelScope.launch {
-            val result = repository.deleteRecurring(id)
+            val result = deleteRecurring(id)
             mutableState.update {
                 it.copy(
                     done = result is AppResult.Success,
@@ -443,16 +435,18 @@ class RecurringEditViewModel(
 // ---------------------------------------------------------------- Outbox (F21)
 
 class OutboxViewModel(
-    private val repository: TransactionRepository,
+    observePendingWrites: ObservePendingWritesUseCase,
+    private val retryPendingWrite: RetryPendingWriteUseCase,
+    private val discardPendingWrite: DiscardPendingWriteUseCase,
 ) : ViewModel() {
-    val pending: StateFlow<List<OutboxEntity>> =
-        repository.pendingWrites.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), emptyList())
+    val pending: StateFlow<List<PendingWrite>> =
+        observePendingWrites().stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), emptyList())
 
-    fun retry(entry: OutboxEntity) {
-        viewModelScope.launch { repository.retryPending(entry) }
+    fun retry(entry: PendingWrite) {
+        viewModelScope.launch { retryPendingWrite(entry) }
     }
 
-    fun discard(entry: OutboxEntity) {
-        viewModelScope.launch { repository.discardPending(entry.id) }
+    fun discard(entry: PendingWrite) {
+        viewModelScope.launch { discardPendingWrite(entry) }
     }
 }

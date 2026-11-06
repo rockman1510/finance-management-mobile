@@ -19,7 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.financemanage.mobile.core.model.AsyncStatus
-import com.financemanage.mobile.core.network.pending.PollResult
+import com.financemanage.mobile.core.model.PollResult
 import com.financemanage.mobile.core.ui.resources.Res
 import com.financemanage.mobile.core.ui.resources.pending_failed
 import com.financemanage.mobile.core.ui.resources.processing

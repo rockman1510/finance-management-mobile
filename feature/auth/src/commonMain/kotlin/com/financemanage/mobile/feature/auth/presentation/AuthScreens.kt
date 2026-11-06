@@ -39,7 +39,7 @@ import com.financemanage.mobile.core.ui.error.fieldError
 import com.financemanage.mobile.core.ui.error.userMessage
 import com.financemanage.mobile.core.ui.resources.field_required
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.auth.domain.AuthRules
+import com.financemanage.mobile.feature.auth.domain.model.AuthRules
 import com.financemanage.mobile.feature.auth.resources.Res
 import com.financemanage.mobile.feature.auth.resources.challenge_expired
 import com.financemanage.mobile.feature.auth.resources.code_sent

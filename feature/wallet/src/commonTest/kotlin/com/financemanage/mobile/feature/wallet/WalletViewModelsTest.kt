@@ -1,7 +1,17 @@
 package com.financemanage.mobile.feature.wallet
 
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.AdjustWalletBalanceUseCase
+import com.financemanage.mobile.core.domain.usecase.CreateWalletUseCase
+import com.financemanage.mobile.core.domain.usecase.DeleteWalletUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.GetWalletTotalUseCase
+import com.financemanage.mobile.core.domain.usecase.GetWalletUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.UpdateWalletUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.WalletType
@@ -39,8 +49,25 @@ private const val CARD =
 class WalletViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val wallets = WalletRepository(backend.client, cache)
-    private val profiles = ProfileRepository(backend.client, cache)
+    private val wallets = WalletRepositoryImpl(backend.client, cache)
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+
+    private fun listViewModel() =
+        WalletListViewModel(
+            ObserveWalletsUseCase(wallets),
+            RefreshWalletsUseCase(wallets),
+            GetWalletTotalUseCase(wallets),
+            GetDefaultCurrencyUseCase(profiles),
+        )
+
+    private fun formViewModel(id: String?) =
+        WalletFormViewModel(
+            id,
+            GetWalletUseCase(wallets),
+            GetDefaultCurrencyUseCase(profiles),
+            CreateWalletUseCase(wallets),
+            UpdateWalletUseCase(wallets),
+        )
 
     @Test
     fun listShowsCachedWalletsAndTheTotalInTheDefaultCurrency() =
@@ -49,7 +76,7 @@ class WalletViewModelsTest {
             profiles.refresh()
             backend.get("wallets", "[${SampleJson.WALLET},$CARD]")
             backend.get("wallets/total", """{"currency":"USD","total":79.5,"missingRates":["VND/USD"]}""")
-            val viewModel = WalletListViewModel(wallets, profiles)
+            val viewModel = listViewModel()
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -74,7 +101,7 @@ class WalletViewModelsTest {
             backend.get("wallets", "[${SampleJson.WALLET}]")
             wallets.refresh()
             backend.offline(HttpMethod.Get, "wallets")
-            val viewModel = WalletListViewModel(wallets, profiles)
+            val viewModel = listViewModel()
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -91,7 +118,7 @@ class WalletViewModelsTest {
             profiles.refresh()
             backend.post("wallets", CARD, HttpStatusCode.Created)
             backend.get("wallets", "[$CARD]")
-            val viewModel = WalletFormViewModel(null, wallets, profiles)
+            val viewModel = formViewModel(null)
             viewModel.state.awaitValue { it.loaded }
             assertEquals(CurrencyCode("USD"), viewModel.state.value.currency)
 
@@ -128,7 +155,7 @@ class WalletViewModelsTest {
         runViewModelTest {
             backend.post("wallets", SampleJson.WALLET, HttpStatusCode.Created)
             backend.get("wallets", "[${SampleJson.WALLET}]")
-            val viewModel = WalletFormViewModel(null, wallets, profiles)
+            val viewModel = formViewModel(null)
             viewModel.state.awaitValue { it.loaded }
 
             viewModel.onName("Tiền mặt")
@@ -147,7 +174,7 @@ class WalletViewModelsTest {
         runViewModelTest {
             backend.get("wallets/c1", CARD)
             backend.fail(HttpMethod.Patch, "wallets/c1", HttpStatusCode.Conflict, "CONCURRENT_MODIFICATION")
-            val viewModel = WalletFormViewModel("c1", wallets, profiles)
+            val viewModel = formViewModel("c1")
             val loaded = viewModel.state.awaitValue { it.loaded }
             assertEquals("Visa", loaded.name)
             assertEquals("-120.50", loaded.initialBalance)
@@ -167,7 +194,14 @@ class WalletViewModelsTest {
             wallets.refresh()
             backend.patch("wallets/$WALLET_ID", SampleJson.WALLET.replace("\"archived\":false", "\"archived\":true"))
             backend.delete("wallets/$WALLET_ID")
-            val viewModel = WalletDetailViewModel(WALLET_ID, wallets)
+            val viewModel =
+                WalletDetailViewModel(
+                    WALLET_ID,
+                    ObserveWalletsUseCase(wallets),
+                    RefreshWalletsUseCase(wallets),
+                    UpdateWalletUseCase(wallets),
+                    DeleteWalletUseCase(wallets),
+                )
             keepCollecting(viewModel.state)
             assertEquals(
                 "Tiền mặt",
@@ -192,7 +226,13 @@ class WalletViewModelsTest {
             backend.get("wallets/$WALLET_ID", SampleJson.WALLET)
             backend.post("wallets/$WALLET_ID/adjust-balance", "{}")
             backend.get("wallets", "[${SampleJson.WALLET}]")
-            val viewModel = AdjustBalanceViewModel(WALLET_ID, wallets, profiles)
+            val viewModel =
+                AdjustBalanceViewModel(
+                    WALLET_ID,
+                    GetWalletUseCase(wallets),
+                    GetTodayUseCase(profiles),
+                    AdjustWalletBalanceUseCase(wallets),
+                )
             val loaded = viewModel.state.awaitValue { it.wallet != null }
             assertEquals("5000000", loaded.newBalance)
 

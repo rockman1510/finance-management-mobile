@@ -1,9 +1,16 @@
 package com.financemanage.mobile.feature.home
 
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.push.PushRepositoryImpl
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePreferencesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePushReceivedUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.ToggleHideBalancesUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.network.pending.PendingPoller
 import com.financemanage.mobile.core.testing.InMemoryPreferencesDataStore
@@ -16,7 +23,22 @@ import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.testing.tracked
 import com.financemanage.mobile.core.ui.components.PendingAction
-import com.financemanage.mobile.feature.home.data.HomeRepository
+import com.financemanage.mobile.feature.home.data.HomeRepositoryImpl
+import com.financemanage.mobile.feature.home.domain.usecase.GetHomeCurrencyUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.GetUnreadNotificationCountUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.HomeUseCases
+import com.financemanage.mobile.feature.home.domain.usecase.ObserveHomeBillsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.ObserveHomeBudgetsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.ObserveHomeGoalsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.ObserveHomeSummaryUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.ObserveHomeTransactionsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.PayHomeBillUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.RefreshHomeBillsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.RefreshHomeBudgetsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.RefreshHomeGoalsUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.RefreshHomeOverviewUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.RefreshHomeSummaryUseCase
+import com.financemanage.mobile.feature.home.domain.usecase.RefreshHomeTransactionsUseCase
 import com.financemanage.mobile.feature.home.presentation.HomeViewModel
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -47,16 +69,36 @@ private const val BILL =
 class HomeViewModelTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
+    private val settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore())
 
     private fun TestScope.viewModel(): HomeViewModel {
+        val home = HomeRepositoryImpl(backend.client, cache, PendingPoller())
+        val profiles = ProfileRepositoryImpl(backend.client, cache)
+        val wallets = WalletRepositoryImpl(backend.client, cache)
+        val currency = GetHomeCurrencyUseCase(profiles)
         val viewModel =
             HomeViewModel(
-                HomeRepository(backend.client, cache, PendingPoller()),
-                ProfileRepository(backend.client, cache),
-                WalletRepository(backend.client, cache),
-                CategoryRepository(backend.client, cache),
-                settings,
+                HomeUseCases(
+                    observeSummary = ObserveHomeSummaryUseCase(home),
+                    refreshSummary = RefreshHomeSummaryUseCase(home, currency),
+                    observeBudgets = ObserveHomeBudgetsUseCase(home),
+                    refreshBudgets = RefreshHomeBudgetsUseCase(home),
+                    observeBills = ObserveHomeBillsUseCase(home),
+                    refreshBills = RefreshHomeBillsUseCase(home),
+                    observeGoals = ObserveHomeGoalsUseCase(home),
+                    refreshGoals = RefreshHomeGoalsUseCase(home),
+                    observeTransactions = ObserveHomeTransactionsUseCase(home),
+                    refreshTransactions = RefreshHomeTransactionsUseCase(home),
+                    getUnreadCount = GetUnreadNotificationCountUseCase(home),
+                    payBill = PayHomeBillUseCase(home, wallets),
+                    refreshOverview = RefreshHomeOverviewUseCase(profiles, wallets, home, currency),
+                ),
+                ObserveProfileUseCase(profiles),
+                ObserveWalletsUseCase(wallets),
+                ObserveCategoriesUseCase(CategoryRepositoryImpl(backend.client, cache)),
+                ObservePreferencesUseCase(settings),
+                ToggleHideBalancesUseCase(settings),
+                ObservePushReceivedUseCase(PushRepositoryImpl()),
             ).tracked()
         keepCollecting(viewModel.state)
         return viewModel

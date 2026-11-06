@@ -51,15 +51,6 @@ data class ProfileDto(
 }
 
 @Serializable
-data class UpdateProfileRequest(
-    val fullName: String? = null,
-    val defaultCurrency: String? = null,
-    val locale: String? = null,
-    val timeZone: String? = null,
-    val monthStartDay: Int? = null,
-)
-
-@Serializable
 data class WalletDto(
     val id: String,
     val name: String = "",
@@ -96,38 +87,6 @@ data class WalletDto(
 }
 
 @Serializable
-data class CreateWalletRequest(
-    val name: String,
-    val type: WalletType,
-    val currency: String? = null,
-    @Serializable(with = MoneySerializer::class) val initialBalance: BigDecimal? = null,
-    val icon: String? = null,
-    val excludedFromTotal: Boolean? = null,
-    @Serializable(with = MoneySerializer::class) val creditLimit: BigDecimal? = null,
-    val statementDay: Int? = null,
-    val paymentDueDay: Int? = null,
-)
-
-@Serializable
-data class UpdateWalletRequest(
-    val name: String? = null,
-    val icon: String? = null,
-    val excludedFromTotal: Boolean? = null,
-    val archived: Boolean? = null,
-    @Serializable(with = MoneySerializer::class) val initialBalance: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val creditLimit: BigDecimal? = null,
-    val statementDay: Int? = null,
-    val paymentDueDay: Int? = null,
-)
-
-@Serializable
-data class AdjustBalanceRequest(
-    @Serializable(with = MoneySerializer::class) val newBalance: BigDecimal,
-    val occurredOn: LocalDate? = null,
-    val note: String? = null,
-)
-
-@Serializable
 data class WalletTotalLineDto(
     val walletId: String,
     val name: String = "",
@@ -142,12 +101,6 @@ data class WalletTotalDto(
     @Serializable(with = MoneySerializer::class) val total: BigDecimal? = null,
     val wallets: List<WalletTotalLineDto> = emptyList(),
     val missingRates: List<String> = emptyList(),
-)
-
-/** Total of the wallets converted to one currency (API §5.1). */
-data class WalletTotal(
-    val total: Money,
-    val missingRates: List<String>,
 )
 
 @Serializable
@@ -195,14 +148,4 @@ data class SaveExchangeRateRequest(
     val quote: String,
     @Serializable(with = MoneySerializer::class) val rate: BigDecimal,
     val effectiveDate: LocalDate? = null,
-)
-
-@Serializable
-data class ConversionDto(
-    @Serializable(with = MoneySerializer::class) val amount: BigDecimal? = null,
-    val from: String? = null,
-    val to: String? = null,
-    @Serializable(with = MoneySerializer::class) val rate: BigDecimal? = null,
-    @Serializable(with = MoneySerializer::class) val converted: BigDecimal? = null,
-    val date: LocalDate? = null,
 )

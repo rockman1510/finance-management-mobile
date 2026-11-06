@@ -1,13 +1,28 @@
 package com.financemanage.mobile.feature.settings
 
 import com.financemanage.mobile.core.data.outbox.OutboxEntity
-import com.financemanage.mobile.core.data.session.SessionState
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.settings.ThemeMode
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.data.outbox.OutboxRepositoryImpl
+import com.financemanage.mobile.core.data.outbox.OutboxSync
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.domain.model.SessionState
+import com.financemanage.mobile.core.domain.model.ThemeMode
+import com.financemanage.mobile.core.domain.usecase.GetCachedProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.GetProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.HideTwoFactorCardUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePendingWritesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePreferencesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshProfileUseCase
+import com.financemanage.mobile.core.domain.usecase.SetAppLockUseCase
+import com.financemanage.mobile.core.domain.usecase.SetHideBalancesUseCase
+import com.financemanage.mobile.core.domain.usecase.SetThemeModeUseCase
+import com.financemanage.mobile.core.domain.usecase.SignOutUseCase
+import com.financemanage.mobile.core.domain.usecase.UpdateProfileUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.network.auth.AuthTokens
+import com.financemanage.mobile.core.testing.FakeNetworkMonitor
 import com.financemanage.mobile.core.testing.FakeOutboxDao
 import com.financemanage.mobile.core.testing.FakeTokenStore
 import com.financemanage.mobile.core.testing.InMemoryPreferencesDataStore
@@ -19,7 +34,17 @@ import com.financemanage.mobile.core.testing.keepCollecting
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.testing.testSessionManager
-import com.financemanage.mobile.feature.settings.data.SecurityRepository
+import com.financemanage.mobile.feature.settings.data.SecurityRepositoryImpl
+import com.financemanage.mobile.feature.settings.domain.usecase.ChangePasswordUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.DeleteAccountUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.DisableTwoFactorUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.EnableTwoFactorUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.GetDeviceSessionsUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.RevokeDeviceSessionUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.RevokeOtherDeviceSessionsUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.SendEmailVerificationCodeUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.SetupTwoFactorUseCase
+import com.financemanage.mobile.feature.settings.domain.usecase.VerifyEmailUseCase
 import com.financemanage.mobile.feature.settings.presentation.DeleteAccountViewModel
 import com.financemanage.mobile.feature.settings.presentation.EmailVerificationViewModel
 import com.financemanage.mobile.feature.settings.presentation.PasswordViewModel
@@ -44,9 +69,22 @@ private val ME_GOOGLE_ONLY = SampleJson.ME.replace("\"hasPassword\":true", "\"ha
 class SettingsViewModelsTest {
     private val backend = MockBackend(FakeTokenStore(AuthTokens("access", "refresh")))
     private val cache = testJsonCache()
-    private val profiles = ProfileRepository(backend.client, cache)
-    private val security = SecurityRepository(backend.client, profiles)
-    private val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+    private val security = SecurityRepositoryImpl(backend.client, profiles)
+
+    private fun twoFactorViewModel() =
+        TwoFactorViewModel(
+            SetupTwoFactorUseCase(security),
+            EnableTwoFactorUseCase(security),
+            DisableTwoFactorUseCase(security),
+            GetProfileUseCase(profiles),
+            startSetupImmediately = true,
+        )
+
+    private fun passwordViewModel() =
+        PasswordViewModel(ChangePasswordUseCase(security), GetCachedProfileUseCase(profiles))
+
+    private val settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore())
 
     @Test
     fun homeShowsProfilePendingWritesAndTheTwoFactorCardUntilSnoozed() =
@@ -56,7 +94,20 @@ class SettingsViewModelsTest {
             val outbox = FakeOutboxDao()
             outbox.upsert(OutboxEntity("1", "transaction", "{}", "k1"))
             val session = testSessionManager(backend, backgroundScope, cache = cache, outbox = outbox)
-            val viewModel = SettingsViewModel(profiles, settings, session, outbox)
+            val outboxRepository =
+                OutboxRepositoryImpl(outbox, OutboxSync(outbox, { emptyList() }, FakeNetworkMonitor(), backgroundScope))
+            val viewModel =
+                SettingsViewModel(
+                    ObserveProfileUseCase(profiles),
+                    RefreshProfileUseCase(profiles),
+                    ObservePreferencesUseCase(settings),
+                    ObservePendingWritesUseCase(outboxRepository),
+                    HideTwoFactorCardUseCase(settings),
+                    SetHideBalancesUseCase(settings),
+                    SetThemeModeUseCase(settings),
+                    SetAppLockUseCase(settings),
+                    SignOutUseCase(session),
+                )
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -86,7 +137,7 @@ class SettingsViewModelsTest {
         runViewModelTest {
             backend.get("me", SampleJson.ME)
             backend.patch("me", SampleJson.ME)
-            val viewModel = ProfileEditViewModel(profiles)
+            val viewModel = ProfileEditViewModel(GetProfileUseCase(profiles), UpdateProfileUseCase(profiles))
             val loaded = viewModel.state.awaitValue { it.loaded }
             assertEquals("Nguyễn Văn A", loaded.fullName)
             assertEquals("Asia/Ho_Chi_Minh", loaded.timeZone)
@@ -117,7 +168,12 @@ class SettingsViewModelsTest {
             profiles.refresh()
             backend.post("me/email/verification-code", "", HttpStatusCode.NoContent)
             backend.post("me/email/verify", "", HttpStatusCode.NoContent)
-            val viewModel = EmailVerificationViewModel(security, profiles)
+            val viewModel =
+                EmailVerificationViewModel(
+                    SendEmailVerificationCodeUseCase(security),
+                    VerifyEmailUseCase(security),
+                    ObserveProfileUseCase(profiles),
+                )
             assertEquals("doc9074@example.com", viewModel.state.awaitValue { it.email.isNotEmpty() }.email)
 
             viewModel.sendCode()
@@ -129,6 +185,7 @@ class SettingsViewModelsTest {
             viewModel.state.awaitValue { it.resendIn == 0 }
             viewModel.sendCode()
             backend.await(HttpMethod.Post, "me/email/verification-code", count = 2)
+            viewModel.state.awaitValue { !it.loading } // verify() is ignored while a request is running
 
             viewModel.onCode("123")
             viewModel.verify()
@@ -145,7 +202,7 @@ class SettingsViewModelsTest {
             backend.get("me", ME_GOOGLE_ONLY)
             profiles.refresh()
             backend.post("me/password", "", HttpStatusCode.NoContent)
-            val viewModel = PasswordViewModel(security, profiles)
+            val viewModel = passwordViewModel()
             viewModel.state.awaitValue { !it.hasPassword }
 
             viewModel.onNew("short")
@@ -166,7 +223,7 @@ class SettingsViewModelsTest {
             backend.get("me", SampleJson.ME)
             profiles.refresh()
             backend.fail(HttpMethod.Post, "me/password", HttpStatusCode.BadRequest, "WRONG_PASSWORD")
-            val viewModel = PasswordViewModel(security, profiles)
+            val viewModel = passwordViewModel()
             viewModel.onNew("NewSecret1")
             viewModel.save()
             assertEquals(SettingsProblem.REQUIRED, viewModel.state.value.problem)
@@ -184,7 +241,7 @@ class SettingsViewModelsTest {
             backend.get("me", SampleJson.ME)
             backend.post("me/2fa/setup", """{"secret":"JBSWY3DPEHPK3PXP","otpauthUri":"otpauth://totp/x"}""")
             backend.fail(HttpMethod.Post, "me/2fa/enable", HttpStatusCode.Unauthorized, "INVALID_CODE")
-            val viewModel = TwoFactorViewModel(security, profiles, startSetupImmediately = true)
+            val viewModel = twoFactorViewModel()
             val setup = viewModel.state.awaitValue { it.stage == TwoFactorStage.SETUP }
             assertEquals("JBSWY3DPEHPK3PXP", setup.setup?.secret)
 
@@ -219,7 +276,7 @@ class SettingsViewModelsTest {
         runViewModelTest {
             backend.get("me", ME_2FA_ON)
             backend.post("me/2fa/disable", "", HttpStatusCode.NoContent)
-            val viewModel = TwoFactorViewModel(security, profiles, startSetupImmediately = true)
+            val viewModel = twoFactorViewModel()
             viewModel.state.awaitValue { it.stage == TwoFactorStage.ON }
             assertTrue(backend.requests(HttpMethod.Post, "me/2fa/setup").isEmpty())
 
@@ -239,12 +296,19 @@ class SettingsViewModelsTest {
             )
             backend.delete("me/sessions/s2")
             backend.delete("me/sessions")
-            val viewModel = SessionsViewModel(security)
+            val viewModel =
+                SessionsViewModel(
+                    GetDeviceSessionsUseCase(security),
+                    RevokeDeviceSessionUseCase(security),
+                    RevokeOtherDeviceSessionsUseCase(security),
+                )
             viewModel.refresh()
             assertEquals(
                 2,
                 viewModel.state
-                    .awaitValue { it.sessions.data != null }
+                    // Wait for the refresh to end, not just for the data: a refresh still running would swallow the
+                    // one triggered by revoke().
+                    .awaitValue { it.sessions.data != null && !it.sessions.loading }
                     .sessions.data
                     ?.size,
             )
@@ -265,7 +329,8 @@ class SettingsViewModelsTest {
             backend.delete("me")
             settings.setOnboardingCompleted(true)
             val session = testSessionManager(backend, backgroundScope, cache = cache, settings = settings)
-            val viewModel = DeleteAccountViewModel(security, profiles, session)
+            val viewModel =
+                DeleteAccountViewModel(DeleteAccountUseCase(security, session), GetCachedProfileUseCase(profiles))
             viewModel.state.awaitValue { it.email.isNotEmpty() }
 
             viewModel.onConfirmEmail("DOC9074@example.com ")

@@ -1,7 +1,7 @@
 package com.financemanage.mobile.feature.transaction
 
 import com.financemanage.mobile.core.data.outbox.OutboxEntity
-import com.financemanage.mobile.core.data.outbox.OutboxStatus
+import com.financemanage.mobile.core.domain.model.OutboxStatus
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.domain.TransactionType
 import com.financemanage.mobile.core.network.IDEMPOTENCY_KEY_HEADER
@@ -12,13 +12,7 @@ import com.financemanage.mobile.core.testing.keepCollecting
 import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.feature.transaction.data.OUTBOX_TRANSACTION
-import com.financemanage.mobile.feature.transaction.domain.TransactionFilter
-import com.financemanage.mobile.feature.transaction.presentation.OutboxViewModel
-import com.financemanage.mobile.feature.transaction.presentation.RecurringEditViewModel
-import com.financemanage.mobile.feature.transaction.presentation.RecurringListViewModel
-import com.financemanage.mobile.feature.transaction.presentation.TransactionDetailViewModel
-import com.financemanage.mobile.feature.transaction.presentation.TransactionListViewModel
-import com.financemanage.mobile.feature.transaction.presentation.TransferViewModel
+import com.financemanage.mobile.feature.transaction.domain.model.TransactionFilter
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -46,7 +40,7 @@ class TransactionViewModelsTest {
                     """{"items":[${transactionJson(id = "t$pageNo")}],"page":$pageNo,"size":30,"totalPages":2}""",
                 )
             }
-            val viewModel = TransactionListViewModel(TransactionFilter(), env.repository, env.wallets, env.categories)
+            val viewModel = env.listViewModel()
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -96,7 +90,7 @@ class TransactionViewModelsTest {
             env.backend.get("transactions", page(transactionJson()))
             env.repository.search(TransactionFilter(), 0, 30)
             env.backend.offline(HttpMethod.Get, "transactions")
-            val viewModel = TransactionListViewModel(TransactionFilter(), env.repository, env.wallets, env.categories)
+            val viewModel = env.listViewModel()
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -115,7 +109,7 @@ class TransactionViewModelsTest {
             env.outboxDao.upsert(
                 OutboxEntity("o1", OUTBOX_TRANSACTION, "{}", "k", OutboxStatus.FAILED.name, "WALLET_ARCHIVED"),
             )
-            val viewModel = TransactionListViewModel(TransactionFilter(), env.repository, env.wallets, env.categories)
+            val viewModel = env.listViewModel()
             keepCollecting(viewModel.state)
             viewModel.refresh()
             val loaded = viewModel.state.awaitValue { it.content.items.isNotEmpty() && it.pending.isNotEmpty() }
@@ -145,7 +139,7 @@ class TransactionViewModelsTest {
                 respond(byteArrayOf(9, 9), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "image/jpeg"))
             }
             env.backend.delete("transfers/tr1")
-            val viewModel = TransactionDetailViewModel("t1", env.repository, env.wallets, env.categories)
+            val viewModel = env.detailViewModel("t1")
 
             viewModel.refresh()
             val loaded = viewModel.state.awaitValue { it.images.isNotEmpty() }
@@ -167,7 +161,7 @@ class TransactionViewModelsTest {
                 """{"amount":10,"from":"USD","to":"VND","rate":25400,"converted":254000}""",
             )
             env.backend.post("transfers", """{"transferId":"tr1"}""", HttpStatusCode.Created)
-            val viewModel = TransferViewModel(env.repository, env.wallets, env.rates, env.profiles)
+            val viewModel = env.transferViewModel()
             val loaded = viewModel.state.awaitValue { it.wallets.isNotEmpty() }
             assertEquals(CASH, loaded.fromId)
             assertEquals(USD_CARD, loaded.toId)
@@ -202,7 +196,7 @@ class TransactionViewModelsTest {
         runViewModelTest {
             val env = TransactionTestEnv(backgroundScope)
             env.backend.offline(HttpMethod.Post, "transfers")
-            val viewModel = TransferViewModel(env.repository, env.wallets, env.rates, env.profiles)
+            val viewModel = env.transferViewModel()
             val loaded = viewModel.state.awaitValue { it.wallets.isNotEmpty() }
             viewModel.onTo(loaded.wallets.first { it.id == USD_CARD })
             viewModel.onAmount("abc")
@@ -229,7 +223,7 @@ class TransactionViewModelsTest {
             env.backend.get("recurring-transactions/r1", RECURRING)
             env.backend.patch("recurring-transactions/r1", RECURRING)
             env.backend.delete("recurring-transactions/r1")
-            val list = RecurringListViewModel(env.repository, env.wallets, env.categories)
+            val list = env.recurringListViewModel()
             keepCollecting(list.state)
             list.refresh()
             val item =
@@ -240,7 +234,7 @@ class TransactionViewModelsTest {
             list.setActive(item, false)
             assertEquals("false", env.backend.await(HttpMethod.Patch, "recurring-transactions/r1").bodyField("active"))
 
-            val edit = RecurringEditViewModel("r1", env.repository, env.wallets, env.categories)
+            val edit = env.recurringEditViewModel("r1")
             assertEquals("30000", edit.state.awaitValue { it.recurring != null }.amount)
             edit.onAmount("0")
             edit.save()
@@ -264,7 +258,7 @@ class TransactionViewModelsTest {
             env.backend.post("transactions", transactionJson(), HttpStatusCode.Created)
             val payload = """{"walletId":"$CASH","categoryId":"food","amount":45000}"""
             env.outboxDao.upsert(OutboxEntity("o1", OUTBOX_TRANSACTION, payload, "key-1", OutboxStatus.FAILED.name))
-            val viewModel = OutboxViewModel(env.repository)
+            val viewModel = env.outboxViewModel()
             keepCollecting(viewModel.pending)
             val entry = viewModel.pending.awaitValue { it.isNotEmpty() }.single()
 

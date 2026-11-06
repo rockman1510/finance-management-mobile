@@ -2,19 +2,25 @@ package com.financemanage.mobile.feature.report.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
-import com.financemanage.mobile.core.model.time.today
-import com.financemanage.mobile.feature.report.data.CashFlowDto
-import com.financemanage.mobile.feature.report.data.CategoryReportDto
-import com.financemanage.mobile.feature.report.data.DashboardDto
-import com.financemanage.mobile.feature.report.data.NetWorthDto
-import com.financemanage.mobile.feature.report.data.ReportRepository
-import com.financemanage.mobile.feature.report.data.SummaryDto
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.report.domain.model.CashFlowDto
+import com.financemanage.mobile.feature.report.domain.model.CategoryReportDto
+import com.financemanage.mobile.feature.report.domain.model.DashboardDto
+import com.financemanage.mobile.feature.report.domain.model.NetWorthDto
+import com.financemanage.mobile.feature.report.domain.model.SummaryDto
+import com.financemanage.mobile.feature.report.domain.usecase.ExportTransactionsCsvUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetCashFlowUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetCategoryReportUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetDashboardUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.GetReportSummaryUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.ObserveNetWorthUseCase
+import com.financemanage.mobile.feature.report.domain.usecase.RefreshNetWorthUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -73,8 +79,12 @@ data class ReportsUiState(
 
 /** Reports (F19). Reports update a few hundred ms after a write: they are reloaded when the screen is shown. */
 class ReportsViewModel(
-    private val repository: ReportRepository,
-    private val profiles: ProfileRepository,
+    private val getReportSummary: GetReportSummaryUseCase,
+    private val getCategoryReport: GetCategoryReportUseCase,
+    private val getCashFlow: GetCashFlowUseCase,
+    private val exportTransactionsCsv: ExportTransactionsCsvUseCase,
+    private val getToday: GetTodayUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ReportsUiState())
     val state: StateFlow<ReportsUiState> = mutableState.asStateFlow()
@@ -84,11 +94,11 @@ class ReportsViewModel(
 
     init {
         viewModelScope.launch {
-            val profile = profiles.current()
-            val (from, to) = presetRange(PeriodPreset.THIS_MONTH, today(profile?.timeZone))
+            val currency = getDefaultCurrency()
+            val (from, to) = presetRange(PeriodPreset.THIS_MONTH, getToday())
             mutableState.update {
                 it.copy(
-                    currency = profile?.defaultCurrency ?: CurrencyCode.DEFAULT,
+                    currency = currency,
                     from = from,
                     to = to,
                 )
@@ -99,7 +109,7 @@ class ReportsViewModel(
 
     fun setPreset(preset: PeriodPreset) {
         viewModelScope.launch {
-            val (from, to) = presetRange(preset, today(profiles.current()?.timeZone))
+            val (from, to) = presetRange(preset, getToday())
             mutableState.update { it.copy(preset = preset, from = from, to = to) }
             refresh()
         }
@@ -145,9 +155,9 @@ class ReportsViewModel(
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch {
-                val summary = repository.summary(from, to, current.currency)
-                val categories = repository.categories(from, to, current.currency, current.categoryType)
-                val cashFlow = repository.cashFlow(from, to, current.currency, granularity)
+                val summary = getReportSummary(from, to, current.currency)
+                val categories = getCategoryReport(from, to, current.currency, current.categoryType)
+                val cashFlow = getCashFlow(from, to, current.currency, granularity)
                 mutableState.update {
                     it.copy(
                         loading = false,
@@ -170,7 +180,7 @@ class ReportsViewModel(
         val from = current.from ?: return
         val to = current.to ?: return
         viewModelScope.launch {
-            when (val result = repository.exportCsv(from, to)) {
+            when (val result = exportTransactionsCsv(from, to)) {
                 is AppResult.Success -> mutableState.update { it.copy(csv = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(error = result.error) }
             }
@@ -186,13 +196,13 @@ data class NetWorthUiState(
 )
 
 class NetWorthViewModel(
-    private val repository: ReportRepository,
-    private val profiles: ProfileRepository,
+    observeNetWorth: ObserveNetWorthUseCase,
+    refreshNetWorth: RefreshNetWorthUseCase,
+    private val getDashboard: GetDashboardUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
 ) : ViewModel() {
     private val holder =
-        ResourceHolder(viewModelScope, repository.netWorth) {
-            repository.refreshNetWorth(profiles.current()?.defaultCurrency ?: CurrencyCode.DEFAULT)
-        }
+        ResourceHolder(viewModelScope, observeNetWorth()) { refreshNetWorth(getDefaultCurrency()) }
     private val dashboard = MutableStateFlow<DashboardDto?>(null)
 
     val state: StateFlow<NetWorthUiState> =
@@ -201,7 +211,7 @@ class NetWorthViewModel(
 
     fun refresh() {
         holder.refresh()
-        viewModelScope.launch { (repository.dashboard() as? AppResult.Success)?.let { dashboard.value = it.value } }
+        viewModelScope.launch { (getDashboard() as? AppResult.Success)?.let { dashboard.value = it.value } }
     }
 
     private companion object {

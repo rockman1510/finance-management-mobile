@@ -1,6 +1,6 @@
 package com.financemanage.mobile.feature.transaction
 
-import com.financemanage.mobile.core.data.outbox.OutboxStatus
+import com.financemanage.mobile.core.domain.model.OutboxStatus
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.network.IDEMPOTENCY_KEY_HEADER
@@ -30,7 +30,7 @@ class QuickAddViewModelTest {
         env: TransactionTestEnv,
         kind: String = "EXPENSE",
         id: String? = null,
-    ) = QuickAddViewModel(kind, id, env.repository, env.wallets, env.categories, env.settings, env.profiles)
+    ) = env.quickAddViewModel(kind, id)
 
     private fun QuickAddViewModel.type(digits: String) =
         digits.forEach { c -> onKey(if (c == '.') KeypadKey.Decimal else KeypadKey.Digit(c.digitToInt())) }

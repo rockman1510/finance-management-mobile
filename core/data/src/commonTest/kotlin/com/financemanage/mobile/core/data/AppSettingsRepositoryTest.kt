@@ -1,8 +1,8 @@
 package com.financemanage.mobile.core.data
 
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.settings.ThemeMode
-import com.financemanage.mobile.core.data.settings.UserPreferences
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.domain.model.ThemeMode
+import com.financemanage.mobile.core.domain.model.UserPreferences
 import com.financemanage.mobile.core.testing.InMemoryPreferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -13,7 +13,7 @@ class AppSettingsRepositoryTest {
     @Test
     fun defaultsThenEveryValueIsReadBack() =
         runTest {
-            val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
+            val settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore())
             assertEquals(UserPreferences(), settings.preferences.first())
 
             settings.setThemeMode(ThemeMode.DARK)
@@ -45,7 +45,7 @@ class AppSettingsRepositoryTest {
     @Test
     fun recentCategoriesAreMostRecentFirstWithoutDuplicatesAndCapped() =
         runTest {
-            val settings = AppSettingsRepository(InMemoryPreferencesDataStore())
+            val settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore())
             (1..10).forEach { settings.rememberCategory("c$it") }
             settings.rememberCategory("c5")
 
