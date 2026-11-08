@@ -27,6 +27,9 @@ interface AppSettingsRepository {
 
     suspend fun setNotificationPermissionAsked()
 
+    /** Debug builds: the backend address to use, `null` = the build's default. */
+    suspend fun setApiBaseUrlOverride(baseUrl: String?)
+
     /** Wipes every preference (sign-out of a deleted account). */
     suspend fun clear()
 }

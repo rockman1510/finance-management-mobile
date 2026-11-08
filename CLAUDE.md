@@ -29,6 +29,8 @@ tests, ktlint + detekt, and the iOS simulator tests + Xcode build.
 
 Backend for manual testing (API §1): Android emulator → `http://10.0.2.2:8080`, iOS simulator → `http://localhost:8080`.
 In the backend's `dev` profile, `GET /api/v1/dev/mailbox?to=<email>` returns e-mail codes.
+Real device / other backend: in a **debug** build, long-press the bottom-left corner of the Welcome screen to set the
+API base URL at runtime (e.g. `http://<Mac LAN IP>:8080`); it is kept across restarts. Release builds ignore it.
 
 ## Module layout
 

@@ -41,6 +41,9 @@ private class FakeSettings : AppSettingsRepository {
 
     override suspend fun setNotificationPermissionAsked() = state.update { it.copy(notificationPermissionAsked = true) }
 
+    override suspend fun setApiBaseUrlOverride(baseUrl: String?) =
+        state.update { it.copy(apiBaseUrlOverride = baseUrl) }
+
     override suspend fun clear() {
         state.value = UserPreferences()
     }

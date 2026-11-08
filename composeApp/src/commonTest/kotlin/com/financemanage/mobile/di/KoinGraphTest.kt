@@ -17,6 +17,7 @@ import com.financemanage.mobile.core.testing.MockBackend
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.tracked
 import com.financemanage.mobile.feature.auth.presentation.ForgotPasswordViewModel
+import com.financemanage.mobile.feature.auth.presentation.ServerSettingsViewModel
 import com.financemanage.mobile.feature.auth.presentation.SignInViewModel
 import com.financemanage.mobile.feature.auth.presentation.SignUpViewModel
 import com.financemanage.mobile.feature.bill.presentation.BillDetailViewModel
@@ -110,6 +111,7 @@ class KoinGraphTest {
             SignUpViewModel::class to parametersOf(),
             AuthTwoFactorViewModel::class to parametersOf("challenge", 300L),
             ForgotPasswordViewModel::class to parametersOf(),
+            ServerSettingsViewModel::class to parametersOf(),
             OnboardingViewModel::class to parametersOf("Tiền mặt", "Chi tiêu"),
             SettingsViewModel::class to parametersOf(),
             AppLockViewModel::class to parametersOf(),

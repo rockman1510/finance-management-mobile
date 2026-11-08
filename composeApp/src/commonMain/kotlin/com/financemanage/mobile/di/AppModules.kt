@@ -6,6 +6,7 @@ import com.financemanage.mobile.core.data.di.dataPlatformModule
 import com.financemanage.mobile.core.data.di.domainModule
 import com.financemanage.mobile.core.data.outbox.OutboxSync
 import com.financemanage.mobile.core.data.push.PushRegistrar
+import com.financemanage.mobile.core.data.server.ApiServerRepositoryImpl
 import com.financemanage.mobile.core.network.ApiConfig
 import com.financemanage.mobile.core.network.di.networkModule
 import com.financemanage.mobile.feature.auth.di.AuthConfig
@@ -75,6 +76,8 @@ fun initKoin(
             platformDeclaration()
             modules(appModules(config))
         }.koin
+    // Debug builds: point at the backend address chosen on the Welcome screen (kept across restarts).
+    koin.get<ApiServerRepositoryImpl>().start()
     // Offline writes (F21) are sent whenever the device is online.
     koin.get<OutboxSync>().start()
     // Push token registration (F20).

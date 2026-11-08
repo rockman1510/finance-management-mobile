@@ -9,6 +9,7 @@ import com.financemanage.mobile.core.data.push.PushBridge
 import com.financemanage.mobile.core.data.push.PushRegistrar
 import com.financemanage.mobile.core.data.push.PushRepositoryImpl
 import com.financemanage.mobile.core.data.security.SecureTokenStore
+import com.financemanage.mobile.core.data.server.ApiServerRepositoryImpl
 import com.financemanage.mobile.core.data.session.SessionManager
 import com.financemanage.mobile.core.data.session.SignOutHook
 import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
@@ -16,6 +17,7 @@ import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
 import com.financemanage.mobile.core.data.shared.ExchangeRateRepositoryImpl
 import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
 import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.repository.ApiServerRepository
 import com.financemanage.mobile.core.domain.repository.AppSettingsRepository
 import com.financemanage.mobile.core.domain.repository.CategoryRepository
 import com.financemanage.mobile.core.domain.repository.ExchangeRateRepository
@@ -83,4 +85,6 @@ val dataModule: Module =
         single<WalletRepository> { WalletRepositoryImpl(get(), get()) }
         single<CategoryRepository> { CategoryRepositoryImpl(get(), get()) }
         single<ExchangeRateRepository> { ExchangeRateRepositoryImpl(get(), get()) }
+        single { ApiServerRepositoryImpl(endpoint = get(), settings = get(), scope = get(AppScope)) } bind
+            ApiServerRepository::class
     }

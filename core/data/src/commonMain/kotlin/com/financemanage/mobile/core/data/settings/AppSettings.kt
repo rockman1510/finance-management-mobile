@@ -32,6 +32,7 @@ class AppSettingsRepositoryImpl(
                 recentCategoryIds = prefs[RECENT_CATEGORIES]?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
                 lastWalletId = prefs[LAST_WALLET_ID],
                 notificationPermissionAsked = prefs[NOTIFICATION_PERMISSION_ASKED] ?: false,
+                apiBaseUrlOverride = prefs[API_BASE_URL_OVERRIDE],
             )
         }
 
@@ -82,6 +83,18 @@ class AppSettingsRepositoryImpl(
         dataStore.edit { it[NOTIFICATION_PERMISSION_ASKED] = true }
     }
 
+    override suspend fun setApiBaseUrlOverride(baseUrl: String?) {
+        dataStore.edit {
+            if (baseUrl ==
+                null
+            ) {
+                it.remove(API_BASE_URL_OVERRIDE)
+            } else {
+                it[API_BASE_URL_OVERRIDE] = baseUrl
+            }
+        }
+    }
+
     /** Wipes every preference (sign-out of a deleted account). */
     override suspend fun clear() {
         dataStore.edit { it.clear() }
@@ -97,6 +110,7 @@ class AppSettingsRepositoryImpl(
         val RECENT_CATEGORIES = stringPreferencesKey("recent_categories")
         val LAST_WALLET_ID = stringPreferencesKey("last_wallet_id")
         val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
+        val API_BASE_URL_OVERRIDE = stringPreferencesKey("api_base_url_override")
     }
 }
 

@@ -32,6 +32,7 @@ private const val CONNECT_TIMEOUT_MS = 15_000L
 /**
  * The single [HttpClient] of the app.
  *
+ * - Requests go to [ApiEndpoint.baseUrl] (relative paths, see [api]).
  * - `expectSuccess = true`: any non-2xx response throws; wrap calls in [apiCall] to get an `AppError`.
  * - Bearer auth on every endpoint except the `auth/` ones, with single-use refresh token rotation.
  */
@@ -41,13 +42,15 @@ fun createHttpClient(
     tokenStore: TokenStore,
     sessionEvents: SessionEvents,
     json: Json = NetworkJson,
+    endpoint: ApiEndpoint = ApiEndpoint(config),
 ): HttpClient {
     val refresher = TokenRefresher(tokenStore, sessionEvents)
     return HttpClient(engine) {
         expectSuccess = true
 
         defaultRequest {
-            url(config.baseUrl.trimEnd('/') + "/")
+            // Read for every request, so a debug override of the backend address applies at once.
+            url(endpoint.baseUrl.value + "/")
             accept(ContentType.Application.Json)
         }
 

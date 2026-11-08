@@ -34,4 +34,13 @@
     <string name="reset_code">6-digit code</string>
     <string name="reset_password">Reset password</string>
     <string name="reset_done">Password reset. Please sign in.</string>
+    <!-- Debug builds only: backend address (long press bottom-left on Welcome) -->
+    <string name="debug_server_title">API server (debug)</string>
+    <string name="debug_server_open">Open server settings (debug)</string>
+    <string name="debug_server_address">Server address</string>
+    <string name="debug_server_hint">e.g. http://192.168.1.20:8080</string>
+    <string name="debug_server_default">Default: %1$s</string>
+    <string name="debug_server_invalid">Use http(s)://host:port without a path</string>
+    <string name="debug_server_use_default">Use default</string>
+    <string name="debug_server_current">Server: %1$s</string>
 </resources>

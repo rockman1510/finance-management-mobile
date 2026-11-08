@@ -7,7 +7,7 @@ import kotlin.experimental.ExperimentalNativeApi
 @OptIn(ExperimentalNativeApi::class)
 actual fun platformApiConfig(): ApiConfig =
     if (Platform.isDebugBinary) {
-        ApiConfig(baseUrl = "http://localhost:8080", enableLogging = true)
+        ApiConfig(baseUrl = "http://localhost:8080", enableLogging = true, allowBaseUrlOverride = true)
     } else {
         ApiConfig(baseUrl = PRODUCTION_API_BASE_URL, enableLogging = false)
     }
