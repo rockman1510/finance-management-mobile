@@ -21,6 +21,7 @@ import com.financemanage.mobile.core.domain.usecase.GetWalletTotalUseCase
 import com.financemanage.mobile.core.domain.usecase.GetWalletUseCase
 import com.financemanage.mobile.core.domain.usecase.GetWalletsUseCase
 import com.financemanage.mobile.core.domain.usecase.HideTwoFactorCardUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveApiServerUseCase
 import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
 import com.financemanage.mobile.core.domain.usecase.ObserveConnectivityUseCase
 import com.financemanage.mobile.core.domain.usecase.ObserveExchangeRatesUseCase
@@ -38,8 +39,10 @@ import com.financemanage.mobile.core.domain.usecase.RefreshProfileUseCase
 import com.financemanage.mobile.core.domain.usecase.RefreshWalletsUseCase
 import com.financemanage.mobile.core.domain.usecase.RememberFormChoicesUseCase
 import com.financemanage.mobile.core.domain.usecase.RequestNotificationPermissionUseCase
+import com.financemanage.mobile.core.domain.usecase.ResetApiBaseUrlUseCase
 import com.financemanage.mobile.core.domain.usecase.RetryPendingWriteUseCase
 import com.financemanage.mobile.core.domain.usecase.SaveExchangeRateUseCase
+import com.financemanage.mobile.core.domain.usecase.SetApiBaseUrlUseCase
 import com.financemanage.mobile.core.domain.usecase.SetAppLockUseCase
 import com.financemanage.mobile.core.domain.usecase.SetHideBalancesUseCase
 import com.financemanage.mobile.core.domain.usecase.SetOnboardingCompletedUseCase
@@ -108,6 +111,10 @@ val domainModule: Module =
         factoryOf(::ObservePendingWritesUseCase)
         factoryOf(::RetryPendingWriteUseCase)
         factoryOf(::DiscardPendingWriteUseCase)
+        // Backend address (debug builds)
+        factoryOf(::ObserveApiServerUseCase)
+        factoryOf(::SetApiBaseUrlUseCase)
+        factoryOf(::ResetApiBaseUrlUseCase)
         // Push (F20)
         factoryOf(::ObservePushReceivedUseCase)
         factoryOf(::RequestNotificationPermissionUseCase)

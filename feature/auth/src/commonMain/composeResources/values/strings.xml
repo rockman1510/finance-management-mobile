@@ -34,4 +34,13 @@
     <string name="reset_code">Mã 6 số</string>
     <string name="reset_password">Đặt lại mật khẩu</string>
     <string name="reset_done">Đã đặt lại mật khẩu. Vui lòng đăng nhập.</string>
+    <!-- Debug builds only: backend address (long press bottom-left on Welcome) -->
+    <string name="debug_server_title">Máy chủ API (debug)</string>
+    <string name="debug_server_open">Mở cài đặt máy chủ (debug)</string>
+    <string name="debug_server_address">Địa chỉ máy chủ</string>
+    <string name="debug_server_hint">Ví dụ: http://192.168.1.20:8080</string>
+    <string name="debug_server_default">Mặc định: %1$s</string>
+    <string name="debug_server_invalid">Nhập dạng http(s)://máy:cổng, không kèm đường dẫn</string>
+    <string name="debug_server_use_default">Dùng mặc định</string>
+    <string name="debug_server_current">Máy chủ: %1$s</string>
 </resources>

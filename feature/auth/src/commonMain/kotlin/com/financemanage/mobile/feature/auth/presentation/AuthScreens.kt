@@ -1,7 +1,10 @@
 package com.financemanage.mobile.feature.auth.presentation
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -37,12 +43,22 @@ import com.financemanage.mobile.core.ui.components.OtpField
 import com.financemanage.mobile.core.ui.components.PasswordField
 import com.financemanage.mobile.core.ui.error.fieldError
 import com.financemanage.mobile.core.ui.error.userMessage
+import com.financemanage.mobile.core.ui.resources.action_cancel
+import com.financemanage.mobile.core.ui.resources.action_save
 import com.financemanage.mobile.core.ui.resources.field_required
 import com.financemanage.mobile.core.ui.theme.Spacing
 import com.financemanage.mobile.feature.auth.domain.model.AuthRules
 import com.financemanage.mobile.feature.auth.resources.Res
 import com.financemanage.mobile.feature.auth.resources.challenge_expired
 import com.financemanage.mobile.feature.auth.resources.code_sent
+import com.financemanage.mobile.feature.auth.resources.debug_server_address
+import com.financemanage.mobile.feature.auth.resources.debug_server_current
+import com.financemanage.mobile.feature.auth.resources.debug_server_default
+import com.financemanage.mobile.feature.auth.resources.debug_server_hint
+import com.financemanage.mobile.feature.auth.resources.debug_server_invalid
+import com.financemanage.mobile.feature.auth.resources.debug_server_open
+import com.financemanage.mobile.feature.auth.resources.debug_server_title
+import com.financemanage.mobile.feature.auth.resources.debug_server_use_default
 import com.financemanage.mobile.feature.auth.resources.email
 import com.financemanage.mobile.feature.auth.resources.error_email_invalid
 import com.financemanage.mobile.feature.auth.resources.error_email_taken
@@ -112,6 +128,18 @@ private fun ErrorText(text: String?) {
 internal fun WelcomeScreen(
     onSignIn: () -> Unit,
     onSignUp: () -> Unit,
+    serverSettings: ServerSettingsViewModel = koinViewModel(),
+) {
+    Box(Modifier.fillMaxSize()) {
+        WelcomeContent(onSignIn = onSignIn, onSignUp = onSignUp)
+        DebugServerSettings(serverSettings, Modifier.align(Alignment.BottomStart))
+    }
+}
+
+@Composable
+private fun WelcomeContent(
+    onSignIn: () -> Unit,
+    onSignUp: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(Spacing.lg),
@@ -143,6 +171,84 @@ internal fun WelcomeScreen(
         ) { Text(stringResource(Res.string.sign_up)) }
     }
 }
+
+/**
+ * Debug builds only: an invisible target in the bottom-left corner; a long press opens a dialog to change the backend
+ * address (e.g. the LAN IP of the Mac running the backend, for a real device). Nothing is shown in release builds.
+ */
+@Composable
+private fun DebugServerSettings(
+    viewModel: ServerSettingsViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val server = state.server
+    if (!state.available || server == null) return
+    val openLabel = stringResource(Res.string.debug_server_open)
+    Box(
+        modifier =
+            modifier
+                .size(DEBUG_TARGET_SIZE)
+                .semantics { contentDescription = openLabel }
+                .combinedClickable(
+                    interactionSource = null,
+                    indication = null,
+                    onLongClickLabel = openLabel,
+                    onLongClick = viewModel::open,
+                    onClick = {},
+                ),
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        // Only a hint while another backend is in use, so the developer knows where requests go.
+        if (!server.isDefault) {
+            Text(
+                stringResource(Res.string.debug_server_current, server.baseUrl),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(Spacing.xs),
+            )
+        }
+    }
+    if (state.editing) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismiss,
+            title = { Text(stringResource(Res.string.debug_server_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    FormTextField(
+                        value = state.input,
+                        onValueChange = viewModel::onInput,
+                        label = stringResource(Res.string.debug_server_address),
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                        error = if (state.invalid) stringResource(Res.string.debug_server_invalid) else null,
+                        supportingText = stringResource(Res.string.debug_server_hint),
+                    )
+                    Text(
+                        stringResource(Res.string.debug_server_default, server.defaultBaseUrl),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::save) { Text(stringResource(CoreRes.string.action_save)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = viewModel::resetToDefault) {
+                        Text(stringResource(Res.string.debug_server_use_default))
+                    }
+                    TextButton(onClick = viewModel::dismiss) { Text(stringResource(CoreRes.string.action_cancel)) }
+                }
+            },
+        )
+    }
+}
+
+private val DEBUG_TARGET_SIZE = 64.dp
 
 @Composable
 internal fun SignInScreen(

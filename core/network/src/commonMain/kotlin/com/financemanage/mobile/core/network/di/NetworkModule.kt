@@ -1,6 +1,7 @@
 package com.financemanage.mobile.core.network.di
 
 import com.financemanage.mobile.core.network.ApiConfig
+import com.financemanage.mobile.core.network.ApiEndpoint
 import com.financemanage.mobile.core.network.NetworkJson
 import com.financemanage.mobile.core.network.auth.SessionEvents
 import com.financemanage.mobile.core.network.createHttpClient
@@ -16,6 +17,7 @@ fun networkModule(config: ApiConfig): Module =
         single { NetworkJson }
         single { SessionEvents() }
         single { PendingPoller() }
+        single { ApiEndpoint(get()) }
         single {
             createHttpClient(
                 engine = createPlatformHttpEngine(),
@@ -23,6 +25,7 @@ fun networkModule(config: ApiConfig): Module =
                 tokenStore = get(),
                 sessionEvents = get(),
                 json = get(),
+                endpoint = get(),
             )
         }
     }

@@ -19,6 +19,8 @@ data class UserPreferences(
     val lastWalletId: String? = null,
     /** Notification permission was already requested (F20). */
     val notificationPermissionAsked: Boolean = false,
+    /** Backend address set at runtime in a debug build, `null` = the build's default. */
+    val apiBaseUrlOverride: String? = null,
 ) {
     companion object {
         const val DEFAULT_RELOCK_MINUTES = 5

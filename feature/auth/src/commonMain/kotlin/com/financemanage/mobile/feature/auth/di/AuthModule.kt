@@ -9,6 +9,7 @@ import com.financemanage.mobile.feature.auth.domain.usecase.SignInWithGoogleUseC
 import com.financemanage.mobile.feature.auth.domain.usecase.SignUpUseCase
 import com.financemanage.mobile.feature.auth.domain.usecase.VerifyTwoFactorUseCase
 import com.financemanage.mobile.feature.auth.presentation.ForgotPasswordViewModel
+import com.financemanage.mobile.feature.auth.presentation.ServerSettingsViewModel
 import com.financemanage.mobile.feature.auth.presentation.SignInViewModel
 import com.financemanage.mobile.feature.auth.presentation.SignUpViewModel
 import com.financemanage.mobile.feature.auth.presentation.TwoFactorViewModel
@@ -38,4 +39,5 @@ val authModule =
         viewModelOf(::SignUpViewModel)
         viewModel { params -> TwoFactorViewModel(get(), params.get<String>(0), params.get<Long>(1)) }
         viewModelOf(::ForgotPasswordViewModel)
+        viewModelOf(::ServerSettingsViewModel)
     }
