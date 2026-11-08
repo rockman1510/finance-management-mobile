@@ -22,6 +22,8 @@ import com.financemanage.mobile.feature.transaction.domain.model.UpdateRecurring
 import com.financemanage.mobile.feature.transaction.domain.model.UpdateTransactionRequest
 import com.financemanage.mobile.feature.transaction.domain.model.WriteOutcome
 import com.financemanage.mobile.feature.transaction.domain.repository.TransactionRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 
@@ -94,13 +96,6 @@ class CreateTransferUseCase(
         key: IdempotencyKey,
         summary: String,
     ): AppResult<WriteOutcome> = repository.transfer(request, key, summary)
-}
-
-/** Deletes both sides of a transfer. */
-class DeleteTransferUseCase(
-    private val repository: TransactionRepository,
-) {
-    suspend operator fun invoke(transferId: String): AppResult<Unit> = repository.deleteTransfer(transferId)
 }
 
 /** Attaches a receipt photo to a transaction (F10). */
@@ -185,18 +180,20 @@ class LoadTransactionFormUseCase(
     private val getPreferences: GetPreferencesUseCase,
     private val getToday: GetTodayUseCase,
 ) {
-    suspend operator fun invoke(): TransactionFormContext {
-        val wallets = getWallets()
-        val categories = getCategories()
-        val preferences = getPreferences()
-        return TransactionFormContext(
-            wallets,
-            categories,
-            preferences.recentCategoryIds,
-            preferences.lastWalletId,
-            getToday(),
-        )
-    }
+    suspend operator fun invoke(): TransactionFormContext =
+        coroutineScope {
+            // On a first launch both lists come from the network: fetch them at the same time.
+            val wallets = async { getWallets() }
+            val categories = async { getCategories() }
+            val preferences = getPreferences()
+            TransactionFormContext(
+                wallets.await(),
+                categories.await(),
+                preferences.recentCategoryIds,
+                preferences.lastWalletId,
+                getToday(),
+            )
+        }
 }
 
 /** The use cases behind the transaction list (F08), injected together. */

@@ -58,7 +58,7 @@ class ResourceHolderTest {
         }
 
     @Test
-    fun refreshIsIgnoredWhileOneIsRunning() =
+    fun refreshesRequestedWhileOneIsRunningAreCoalescedIntoOneMore() =
         runTest(UnconfinedTestDispatcher()) {
             var calls = 0
             val gate = CompletableDeferred<AppResult<Unit>>()
@@ -69,8 +69,11 @@ class ResourceHolderTest {
                 }
             holder.refresh()
             holder.refresh()
-            gate.complete(AppResult.Success(Unit))
+            holder.refresh()
             assertEquals(1, calls)
+            gate.complete(AppResult.Success(Unit))
+            assertEquals(2, calls)
+            assertFalse(holder.state.value.loading)
         }
 
     @Test

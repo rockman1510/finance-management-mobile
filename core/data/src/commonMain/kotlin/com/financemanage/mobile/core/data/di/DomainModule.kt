@@ -1,7 +1,6 @@
 package com.financemanage.mobile.core.data.di
 
 import com.financemanage.mobile.core.domain.usecase.AdjustWalletBalanceUseCase
-import com.financemanage.mobile.core.domain.usecase.ClearLocalSessionUseCase
 import com.financemanage.mobile.core.domain.usecase.ConsumeOpenedNotificationUseCase
 import com.financemanage.mobile.core.domain.usecase.ConvertCurrencyUseCase
 import com.financemanage.mobile.core.domain.usecase.CreateCategoryUseCase
@@ -104,7 +103,6 @@ val domainModule: Module =
         // Session & connectivity
         factoryOf(::ObserveSessionStateUseCase)
         factoryOf(::SignOutUseCase)
-        factoryOf(::ClearLocalSessionUseCase)
         factoryOf(::ObserveConnectivityUseCase)
         // Outbox (F21)
         factoryOf(::ObservePendingWritesUseCase)

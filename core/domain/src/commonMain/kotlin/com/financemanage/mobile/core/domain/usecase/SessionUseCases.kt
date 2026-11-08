@@ -18,13 +18,6 @@ class SignOutUseCase(
     suspend operator fun invoke() = repository.signOut()
 }
 
-/** Wipes the local session after the account was deleted on the server. */
-class ClearLocalSessionUseCase(
-    private val repository: SessionRepository,
-) {
-    suspend operator fun invoke(wipeSettings: Boolean) = repository.clearLocalSession(wipeSettings)
-}
-
 class ObserveConnectivityUseCase(
     private val networkMonitor: NetworkMonitor,
 ) {

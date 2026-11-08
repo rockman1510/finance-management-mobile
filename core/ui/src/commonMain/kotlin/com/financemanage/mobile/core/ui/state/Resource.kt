@@ -41,19 +41,30 @@ class ResourceHolder<T>(
     private val refreshing = MutableStateFlow(false)
     private val error = MutableStateFlow<AppError?>(null)
     private var everLoaded = false
+    private var refreshAgain = false
 
     val state: StateFlow<Resource<T>> =
         combine(source, refreshing, error) { cached, isRefreshing, lastError ->
             Resource(cached?.value, isRefreshing || (!everLoaded && cached == null), lastError, cached?.updatedAt)
         }.stateIn(scope, SharingStarted.Eagerly, Resource(loading = true))
 
+    /**
+     * Starts a refresh. Calls made while one is running are coalesced into a single follow-up refresh, so data that
+     * changed during the running one (e.g. after a write) is still fetched.
+     */
     fun refresh() {
-        if (refreshing.value) return
+        if (refreshing.value) {
+            refreshAgain = true
+            return
+        }
+        refreshing.value = true
         scope.launch {
-            refreshing.value = true
-            val result = refresher()
-            error.value = (result as? AppResult.Failure)?.error
-            everLoaded = true
+            do {
+                refreshAgain = false
+                val result = refresher()
+                error.value = (result as? AppResult.Failure)?.error
+                everLoaded = true
+            } while (refreshAgain)
             refreshing.value = false
         }
     }

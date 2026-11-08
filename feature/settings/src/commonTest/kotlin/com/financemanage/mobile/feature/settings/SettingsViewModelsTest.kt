@@ -306,9 +306,7 @@ class SettingsViewModelsTest {
             assertEquals(
                 2,
                 viewModel.state
-                    // Wait for the refresh to end, not just for the data: a refresh still running would swallow the
-                    // one triggered by revoke().
-                    .awaitValue { it.sessions.data != null && !it.sessions.loading }
+                    .awaitValue { it.sessions.data != null }
                     .sessions.data
                     ?.size,
             )

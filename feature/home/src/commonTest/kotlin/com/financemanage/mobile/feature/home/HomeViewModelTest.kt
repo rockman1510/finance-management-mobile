@@ -5,6 +5,7 @@ import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
 import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
 import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
 import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetProfileUseCase
 import com.financemanage.mobile.core.domain.usecase.ObserveCategoriesUseCase
 import com.financemanage.mobile.core.domain.usecase.ObservePreferencesUseCase
 import com.financemanage.mobile.core.domain.usecase.ObserveProfileUseCase
@@ -75,7 +76,7 @@ class HomeViewModelTest {
         val home = HomeRepositoryImpl(backend.client, cache, PendingPoller())
         val profiles = ProfileRepositoryImpl(backend.client, cache)
         val wallets = WalletRepositoryImpl(backend.client, cache)
-        val currency = GetHomeCurrencyUseCase(profiles)
+        val currency = GetHomeCurrencyUseCase(GetProfileUseCase(profiles))
         val viewModel =
             HomeViewModel(
                 HomeUseCases(

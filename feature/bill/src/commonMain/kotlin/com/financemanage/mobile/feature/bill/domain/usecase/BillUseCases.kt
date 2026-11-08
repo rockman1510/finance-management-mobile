@@ -24,13 +24,6 @@ class RefreshBillsUseCase(
     suspend operator fun invoke(): AppResult<List<Bill>> = repository.refresh()
 }
 
-/** Bills due within [days]. */
-class GetUpcomingBillsUseCase(
-    private val repository: BillRepository,
-) {
-    suspend operator fun invoke(days: Int): AppResult<List<Bill>> = repository.upcoming(days)
-}
-
 class GetBillUseCase(
     private val repository: BillRepository,
 ) {

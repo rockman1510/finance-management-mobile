@@ -11,7 +11,6 @@ import com.financemanage.mobile.feature.deposit.domain.usecase.ObserveDepositsUs
 import com.financemanage.mobile.feature.deposit.domain.usecase.PreviewDepositUseCase
 import com.financemanage.mobile.feature.deposit.domain.usecase.RefreshDepositsUseCase
 import com.financemanage.mobile.feature.deposit.domain.usecase.SettleDepositUseCase
-import com.financemanage.mobile.feature.deposit.domain.usecase.UpdateDepositNoteUseCase
 import com.financemanage.mobile.feature.deposit.presentation.DepositDetailViewModel
 import com.financemanage.mobile.feature.deposit.presentation.DepositFormViewModel
 import com.financemanage.mobile.feature.deposit.presentation.DepositListViewModel
@@ -30,7 +29,6 @@ val depositModule =
         factoryOf(::GetDepositUseCase)
         factoryOf(::PreviewDepositUseCase)
         factoryOf(::CreateDepositUseCase)
-        factoryOf(::UpdateDepositNoteUseCase)
         factoryOf(::GetSettlementQuoteUseCase)
         factoryOf(::SettleDepositUseCase)
         factoryOf(::AwaitDepositRecordedUseCase)

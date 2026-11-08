@@ -5,7 +5,6 @@ import com.financemanage.mobile.feature.bill.domain.repository.BillRepository
 import com.financemanage.mobile.feature.bill.domain.usecase.CreateBillUseCase
 import com.financemanage.mobile.feature.bill.domain.usecase.DeleteBillUseCase
 import com.financemanage.mobile.feature.bill.domain.usecase.GetBillUseCase
-import com.financemanage.mobile.feature.bill.domain.usecase.GetUpcomingBillsUseCase
 import com.financemanage.mobile.feature.bill.domain.usecase.ObserveBillsUseCase
 import com.financemanage.mobile.feature.bill.domain.usecase.PayBillUseCase
 import com.financemanage.mobile.feature.bill.domain.usecase.RefreshBillsUseCase
@@ -26,7 +25,6 @@ val billModule =
         // Domain
         factoryOf(::ObserveBillsUseCase)
         factoryOf(::RefreshBillsUseCase)
-        factoryOf(::GetUpcomingBillsUseCase)
         factoryOf(::GetBillUseCase)
         factoryOf(::CreateBillUseCase)
         factoryOf(::UpdateBillUseCase)

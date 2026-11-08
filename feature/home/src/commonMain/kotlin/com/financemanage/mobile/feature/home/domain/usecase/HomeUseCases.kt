@@ -4,6 +4,7 @@ import com.financemanage.mobile.core.domain.model.Cached
 import com.financemanage.mobile.core.domain.model.WalletTotal
 import com.financemanage.mobile.core.domain.repository.ProfileRepository
 import com.financemanage.mobile.core.domain.repository.WalletRepository
+import com.financemanage.mobile.core.domain.usecase.GetProfileUseCase
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.PollResult
@@ -19,10 +20,9 @@ import kotlinx.coroutines.flow.Flow
 
 /** The default currency; on a first launch the profile is not cached yet, so it is fetched first. */
 class GetHomeCurrencyUseCase(
-    private val profiles: ProfileRepository,
+    private val getProfile: GetProfileUseCase,
 ) {
-    suspend operator fun invoke(): CurrencyCode =
-        (profiles.current() ?: profiles.refresh().getOrNull())?.defaultCurrency ?: CurrencyCode.DEFAULT
+    suspend operator fun invoke(): CurrencyCode = getProfile()?.defaultCurrency ?: CurrencyCode.DEFAULT
 }
 
 class ObserveHomeSummaryUseCase(

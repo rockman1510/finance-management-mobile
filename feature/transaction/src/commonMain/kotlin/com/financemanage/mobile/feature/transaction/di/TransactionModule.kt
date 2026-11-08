@@ -13,7 +13,6 @@ import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteReceipt
 import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteRecurringUseCase
 import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteTransactionOrTransferUseCase
 import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteTransactionUseCase
-import com.financemanage.mobile.feature.transaction.domain.usecase.DeleteTransferUseCase
 import com.financemanage.mobile.feature.transaction.domain.usecase.DownloadReceiptUseCase
 import com.financemanage.mobile.feature.transaction.domain.usecase.GetRecurringUseCase
 import com.financemanage.mobile.feature.transaction.domain.usecase.GetTransactionTotalsUseCase
@@ -56,7 +55,6 @@ val transactionModule =
         factoryOf(::DeleteTransactionUseCase)
         factoryOf(::DeleteTransactionOrTransferUseCase)
         factoryOf(::CreateTransferUseCase)
-        factoryOf(::DeleteTransferUseCase)
         factoryOf(::UploadReceiptUseCase)
         factoryOf(::DownloadReceiptUseCase)
         factoryOf(::DeleteReceiptUseCase)

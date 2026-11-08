@@ -44,15 +44,6 @@ class CreateDepositUseCase(
     suspend operator fun invoke(request: CreateDepositRequest): AppResult<DepositDto> = repository.create(request)
 }
 
-class UpdateDepositNoteUseCase(
-    private val repository: DepositRepository,
-) {
-    suspend operator fun invoke(
-        id: String,
-        note: String,
-    ): AppResult<DepositDto> = repository.updateNote(id, note)
-}
-
 /** What the user receives when settling the deposit on a date. */
 class GetSettlementQuoteUseCase(
     private val repository: DepositRepository,
