@@ -2,9 +2,9 @@ package com.financemanage.mobile.core.data
 
 import com.financemanage.mobile.core.data.outbox.OutboxEntity
 import com.financemanage.mobile.core.data.session.SessionManager
-import com.financemanage.mobile.core.data.session.SessionState
 import com.financemanage.mobile.core.data.session.SignOutHook
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
+import com.financemanage.mobile.core.data.settings.AppSettingsRepositoryImpl
+import com.financemanage.mobile.core.domain.model.SessionState
 import com.financemanage.mobile.core.network.auth.AuthTokens
 import com.financemanage.mobile.core.network.auth.SessionEvent
 import com.financemanage.mobile.core.network.auth.SessionEvents
@@ -59,7 +59,7 @@ class SessionManagerTest {
                         },
                     cache = cache,
                     outboxDao = outbox,
-                    settings = AppSettingsRepository(InMemoryPreferencesDataStore()),
+                    settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore()),
                     hooks = { listOf(SignOutHook { hookCalled = true }, SignOutHook { error("ignored") }) },
                     sessionEvents = SessionEvents(),
                     scope = backgroundScope,
@@ -112,7 +112,7 @@ class SessionManagerTest {
         httpClient = mockHttpClient(tokenStore) { respondJson("", HttpStatusCode.NoContent) },
         cache = testJsonCache(),
         outboxDao = FakeOutboxDao(),
-        settings = AppSettingsRepository(InMemoryPreferencesDataStore()),
+        settings = AppSettingsRepositoryImpl(InMemoryPreferencesDataStore()),
         hooks = { emptyList() },
         sessionEvents = events,
         scope = backgroundScope,

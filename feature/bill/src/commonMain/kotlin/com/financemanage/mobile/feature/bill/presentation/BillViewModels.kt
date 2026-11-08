@@ -2,33 +2,38 @@ package com.financemanage.mobile.feature.bill.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.push.PushBridge
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.usecase.GetCachedCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.RequestNotificationPermissionUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.CategoryType
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toPlainString
 import com.financemanage.mobile.core.ui.components.PendingAction
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.bill.data.Bill
-import com.financemanage.mobile.feature.bill.data.BillRepository
-import com.financemanage.mobile.feature.bill.data.CreateBillRequest
-import com.financemanage.mobile.feature.bill.data.PayBillRequest
-import com.financemanage.mobile.feature.bill.data.UpdateBillRequest
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.bill.domain.model.Bill
+import com.financemanage.mobile.feature.bill.domain.model.CreateBillRequest
+import com.financemanage.mobile.feature.bill.domain.model.PayBillRequest
+import com.financemanage.mobile.feature.bill.domain.model.UpdateBillRequest
+import com.financemanage.mobile.feature.bill.domain.usecase.CreateBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.DeleteBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.GetBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.ObserveBillsUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.PayBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.RefreshBillsUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.SkipBillUseCase
+import com.financemanage.mobile.feature.bill.domain.usecase.UpdateBillUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -36,13 +41,13 @@ import kotlinx.datetime.LocalDate
 
 /** Pays a bill and maps the PENDING flow to a [PendingAction]. Shared by the list and the detail. */
 internal suspend fun payBill(
-    repository: BillRepository,
+    payBillUseCase: PayBillUseCase,
     bill: Bill,
     amount: com.ionspin.kotlin.bignum.decimal.BigDecimal? = null,
     walletId: String? = null,
     paidOn: LocalDate? = null,
 ): Pair<PendingAction?, AppError?> =
-    when (val result = repository.pay(bill.id, PayBillRequest(amount, walletId, paidOn))) {
+    when (val result = payBillUseCase(bill.id, PayBillRequest(amount, walletId, paidOn))) {
         is AppResult.Failure -> null to result.error
         is AppResult.Success -> PendingAction.from(result.value, { it.status }, { it.failureReason }) to null
     }
@@ -55,9 +60,11 @@ data class BillListUiState(
 )
 
 class BillListViewModel(
-    private val repository: BillRepository,
+    observeBills: ObserveBillsUseCase,
+    refreshBills: RefreshBillsUseCase,
+    private val payBillUseCase: PayBillUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.bills) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeBills()) { refreshBills() }
     private val action = MutableStateFlow(Triple<String?, PendingAction?, AppError?>(null, null, null))
 
     val state: StateFlow<BillListUiState> =
@@ -74,7 +81,7 @@ class BillListViewModel(
         if (action.value.first != null) return
         action.value = Triple(bill.id, PendingAction.Processing, null)
         viewModelScope.launch {
-            val (pending, error) = payBill(repository, bill)
+            val (pending, error) = payBill(payBillUseCase, bill)
             action.value = Triple(null, pending, error)
         }
     }
@@ -96,9 +103,13 @@ data class BillDetailUiState(
 
 class BillDetailViewModel(
     private val id: String,
-    private val repository: BillRepository,
-    wallets: WalletRepository,
-    categories: CategoryRepository,
+    private val getBill: GetBillUseCase,
+    private val payBillUseCase: PayBillUseCase,
+    private val skipBill: SkipBillUseCase,
+    private val updateBill: UpdateBillUseCase,
+    private val deleteBill: DeleteBillUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getCachedCategories: GetCachedCategoriesUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(BillDetailUiState())
     val state: StateFlow<BillDetailUiState> = mutableState.asStateFlow()
@@ -107,16 +118,8 @@ class BillDetailViewModel(
         viewModelScope.launch {
             mutableState.update {
                 it.copy(
-                    wallets =
-                        wallets.wallets
-                            .first()
-                            ?.value
-                            .orEmpty(),
-                    categories =
-                        categories.categories
-                            .first()
-                            ?.value
-                            .orEmpty(),
+                    wallets = getCachedWallets(),
+                    categories = getCachedCategories(),
                 )
             }
         }
@@ -124,7 +127,7 @@ class BillDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            when (val result = repository.get(id)) {
+            when (val result = getBill(id)) {
                 is AppResult.Success -> mutableState.update { it.copy(bill = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(error = result.error) }
             }
@@ -139,19 +142,19 @@ class BillDetailViewModel(
         val bill = mutableState.value.bill ?: return
         mutableState.update { it.copy(busy = true, pending = PendingAction.Processing, error = null) }
         viewModelScope.launch {
-            val (pending, error) = payBill(repository, bill, amount, walletId, paidOn)
+            val (pending, error) = payBill(payBillUseCase, bill, amount, walletId, paidOn)
             mutableState.update { it.copy(busy = false, pending = pending, error = error) }
             refresh()
         }
     }
 
-    fun skip() = act { repository.skip(id) }
+    fun skip() = act { skipBill(id) }
 
-    fun setActive(active: Boolean) = act { repository.update(id, UpdateBillRequest(active = active)) }
+    fun setActive(active: Boolean) = act { updateBill(id, UpdateBillRequest(active = active)) }
 
     fun delete() =
         act {
-            repository.delete(id).also {
+            deleteBill(id).also {
                 if (it is AppResult.Success) {
                     mutableState.update { s ->
                         s.copy(deleted = true)
@@ -207,10 +210,13 @@ data class BillFormUiState(
 
 class BillFormViewModel(
     private val id: String?,
-    private val repository: BillRepository,
-    wallets: WalletRepository,
-    categories: CategoryRepository,
-    profiles: ProfileRepository,
+    getBill: GetBillUseCase,
+    private val createBill: CreateBillUseCase,
+    private val updateBill: UpdateBillUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getCachedCategories: GetCachedCategoriesUseCase,
+    getToday: GetTodayUseCase,
+    private val requestNotificationPermission: RequestNotificationPermissionUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(BillFormUiState(isEdit = id != null))
     val state: StateFlow<BillFormUiState> = mutableState.asStateFlow()
@@ -218,25 +224,21 @@ class BillFormViewModel(
     init {
         viewModelScope.launch {
             val walletList =
-                wallets.wallets
-                    .first()
-                    ?.value
-                    .orEmpty()
-                    .filter { !it.archived }
+                getCachedWallets().filter { !it.archived }
             mutableState.update {
                 it.copy(
                     wallets = walletList,
                     walletId = walletList.firstOrNull()?.id,
                     categories =
-                        categories.categories.first()?.value.orEmpty().filter { c ->
+                        getCachedCategories().filter { c ->
                             c.type ==
                                 CategoryType.EXPENSE
                         },
-                    firstDueDate = today(profiles.current()?.timeZone),
+                    firstDueDate = getToday(),
                 )
             }
             if (id != null) {
-                (repository.get(id) as? AppResult.Success)?.value?.let { bill ->
+                (getBill(id) as? AppResult.Success)?.value?.let { bill ->
                     mutableState.update {
                         it.copy(
                             name = bill.name,
@@ -333,7 +335,7 @@ class BillFormViewModel(
             val note = form.note.trim()
             val result =
                 if (id == null) {
-                    repository.create(
+                    createBill(
                         CreateBillRequest(
                             name = form.name.trim(),
                             amount = valid.amount,
@@ -348,7 +350,7 @@ class BillFormViewModel(
                         ),
                     )
                 } else {
-                    repository.update(
+                    updateBill(
                         id,
                         UpdateBillRequest(
                             form.name.trim(),
@@ -362,7 +364,7 @@ class BillFormViewModel(
                     )
                 }
             // Ask for the notification permission after the first budget / bill (F20; asked once).
-            if (id == null && result is AppResult.Success) PushBridge.requestPermission()
+            if (id == null && result is AppResult.Success) requestNotificationPermission()
             mutableState.update {
                 it.copy(
                     saving = false,

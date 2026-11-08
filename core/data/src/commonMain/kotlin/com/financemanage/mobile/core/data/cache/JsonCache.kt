@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.financemanage.mobile.core.domain.model.Cached
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.Clock
@@ -44,12 +45,6 @@ interface JsonCacheDao {
     @Query("DELETE FROM json_cache")
     suspend fun clear()
 }
-
-/** A cached value and when it was fetched ("Updated at HH:mm"). */
-data class Cached<out T>(
-    val value: T,
-    val updatedAt: Instant,
-)
 
 class JsonCache(
     private val dao: JsonCacheDao,

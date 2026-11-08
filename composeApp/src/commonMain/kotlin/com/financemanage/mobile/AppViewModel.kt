@@ -2,11 +2,11 @@ package com.financemanage.mobile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.connectivity.NetworkMonitor
-import com.financemanage.mobile.core.data.session.SessionState
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.settings.ThemeMode
-import kotlinx.coroutines.flow.Flow
+import com.financemanage.mobile.core.domain.model.SessionState
+import com.financemanage.mobile.core.domain.model.ThemeMode
+import com.financemanage.mobile.core.domain.usecase.ObserveConnectivityUseCase
+import com.financemanage.mobile.core.domain.usecase.ObservePreferencesUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveSessionStateUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -24,12 +24,16 @@ data class AppUiState(
 
 /** App-wide UI state: theme, hidden balances, connectivity, session and lock settings. */
 class AppViewModel(
-    settings: AppSettingsRepository,
-    networkMonitor: NetworkMonitor,
-    sessionState: Flow<SessionState>,
+    observePreferences: ObservePreferencesUseCase,
+    observeConnectivity: ObserveConnectivityUseCase,
+    observeSessionState: ObserveSessionStateUseCase,
 ) : ViewModel() {
     val uiState: StateFlow<AppUiState> =
-        combine(settings.preferences, networkMonitor.isOnline, sessionState) { preferences, online, sessionState ->
+        combine(
+            observePreferences(),
+            observeConnectivity(),
+            observeSessionState(),
+        ) { preferences, online, sessionState ->
             AppUiState(
                 themeMode = preferences.themeMode,
                 hideBalances = preferences.hideBalances,

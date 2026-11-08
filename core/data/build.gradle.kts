@@ -9,6 +9,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(projects.core.model)
+            api(projects.core.domain)
             api(projects.core.network)
             api(libs.androidx.room.runtime)
             api(libs.androidx.datastore.preferences.core)

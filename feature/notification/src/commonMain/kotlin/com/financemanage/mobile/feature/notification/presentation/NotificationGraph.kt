@@ -3,7 +3,7 @@ package com.financemanage.mobile.feature.notification.presentation
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.financemanage.mobile.core.data.push.NotificationLink
+import com.financemanage.mobile.core.domain.model.NotificationLink
 import com.financemanage.mobile.core.navigation.NotificationSettingsRoute
 import com.financemanage.mobile.core.navigation.NotificationsRoute
 

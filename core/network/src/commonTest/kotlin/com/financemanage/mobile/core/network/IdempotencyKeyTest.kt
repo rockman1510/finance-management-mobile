@@ -1,5 +1,7 @@
 package com.financemanage.mobile.core.network
 
+import com.financemanage.mobile.core.model.IdempotencyKey
+import com.financemanage.mobile.core.model.IdempotencyKeyHolder
 import io.ktor.client.request.post
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test

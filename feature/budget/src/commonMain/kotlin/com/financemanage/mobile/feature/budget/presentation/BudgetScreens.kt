@@ -78,9 +78,9 @@ import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.budget.data.Budget
-import com.financemanage.mobile.feature.budget.data.BudgetPeriod
-import com.financemanage.mobile.feature.budget.data.BudgetState
+import com.financemanage.mobile.feature.budget.domain.model.Budget
+import com.financemanage.mobile.feature.budget.domain.model.BudgetPeriod
+import com.financemanage.mobile.feature.budget.domain.model.BudgetState
 import com.financemanage.mobile.feature.budget.resources.Res
 import com.financemanage.mobile.feature.budget.resources.add_budget
 import com.financemanage.mobile.feature.budget.resources.budget_transactions

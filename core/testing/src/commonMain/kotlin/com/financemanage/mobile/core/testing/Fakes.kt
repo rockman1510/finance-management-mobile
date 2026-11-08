@@ -3,7 +3,7 @@ package com.financemanage.mobile.core.testing
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
-import com.financemanage.mobile.core.data.connectivity.NetworkMonitor
+import com.financemanage.mobile.core.domain.repository.NetworkMonitor
 import com.financemanage.mobile.core.network.auth.AuthTokens
 import com.financemanage.mobile.core.network.auth.TokenStore
 import kotlinx.coroutines.flow.MutableStateFlow

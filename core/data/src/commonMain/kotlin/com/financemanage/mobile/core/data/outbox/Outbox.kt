@@ -5,19 +5,20 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
-import com.financemanage.mobile.core.data.connectivity.NetworkMonitor
+import com.financemanage.mobile.core.domain.model.OutboxStatus
+import com.financemanage.mobile.core.domain.model.PendingWrite
+import com.financemanage.mobile.core.domain.repository.NetworkMonitor
+import com.financemanage.mobile.core.domain.repository.OutboxRepository
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
-
-/** Status of a write waiting to reach the server (F21). */
-enum class OutboxStatus { WAITING, FAILED }
 
 /**
  * A write created offline (income/expense transaction, transfer). It keeps its Idempotency-Key so that sending it
@@ -39,6 +40,9 @@ data class OutboxEntity(
 interface OutboxDao {
     @Query("SELECT * FROM outbox ORDER BY createdAtEpochMillis")
     fun observeAll(): Flow<List<OutboxEntity>>
+
+    @Query("SELECT * FROM outbox WHERE id = :id")
+    suspend fun get(id: String): OutboxEntity?
 
     @Query("SELECT * FROM outbox WHERE status = 'WAITING' ORDER BY createdAtEpochMillis")
     suspend fun waiting(): List<OutboxEntity>
@@ -114,4 +118,29 @@ class OutboxSync(
     private companion object {
         val CLIENT_ERRORS = 400..499
     }
+}
+
+fun OutboxEntity.toPendingWrite(): PendingWrite =
+    PendingWrite(
+        id = id,
+        kind = kind,
+        summary = summary,
+        status = OutboxStatus.entries.firstOrNull { it.name == status } ?: OutboxStatus.WAITING,
+        errorCode = errorCode,
+        createdAtEpochMillis = createdAtEpochMillis,
+    )
+
+/** [OutboxRepository] over the Room `outbox` table and [OutboxSync]. */
+class OutboxRepositoryImpl(
+    private val dao: OutboxDao,
+    private val sync: OutboxSync,
+) : OutboxRepository {
+    override val pending: Flow<List<PendingWrite>> =
+        dao.observeAll().map { list -> list.map(OutboxEntity::toPendingWrite) }
+
+    override suspend fun retry(id: String) {
+        dao.get(id)?.let { sync.retry(it) }
+    }
+
+    override suspend fun discard(id: String) = sync.discard(id)
 }

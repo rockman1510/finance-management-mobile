@@ -2,17 +2,20 @@ package com.financemanage.mobile.feature.currency.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.shared.ConversionDto
-import com.financemanage.mobile.core.data.shared.ExchangeRateRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.domain.model.ConversionDto
+import com.financemanage.mobile.core.domain.usecase.ConvertCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.DeleteExchangeRateUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveExchangeRatesUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshExchangeRatesUseCase
+import com.financemanage.mobile.core.domain.usecase.SaveExchangeRateUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.ExchangeRate
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toBigDecimalOrNull
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,9 +32,11 @@ data class RatesUiState(
 )
 
 class RatesViewModel(
-    private val repository: ExchangeRateRepository,
+    observeRates: ObserveExchangeRatesUseCase,
+    refreshRates: RefreshExchangeRatesUseCase,
+    private val deleteRate: DeleteExchangeRateUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.rates) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeRates()) { refreshRates() }
     private val actionError = MutableStateFlow<AppError?>(null)
 
     val state: StateFlow<RatesUiState> =
@@ -41,7 +46,7 @@ class RatesViewModel(
     fun refresh() = holder.refresh()
 
     fun delete(rate: ExchangeRate) {
-        viewModelScope.launch { actionError.value = (repository.delete(rate.id) as? AppResult.Failure)?.error }
+        viewModelScope.launch { actionError.value = (deleteRate(rate.id) as? AppResult.Failure)?.error }
     }
 
     private companion object {
@@ -66,8 +71,8 @@ data class AddRateUiState(
 class AddRateViewModel(
     base: String?,
     quote: String?,
-    private val repository: ExchangeRateRepository,
-    profiles: ProfileRepository,
+    private val saveRate: SaveExchangeRateUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow(
@@ -80,7 +85,7 @@ class AddRateViewModel(
 
     init {
         viewModelScope.launch {
-            val date = today(profiles.current()?.timeZone)
+            val date = getToday()
             mutableState.update { it.copy(date = date) }
         }
     }
@@ -108,7 +113,7 @@ class AddRateViewModel(
         }
         mutableState.update { it.copy(saving = true) }
         viewModelScope.launch {
-            val result = repository.save(form.base, form.quote, rate, form.date)
+            val result = saveRate(form.base, form.quote, rate, form.date)
             mutableState.update {
                 it.copy(
                     saving = false,
@@ -131,7 +136,7 @@ data class ConverterUiState(
 )
 
 class ConverterViewModel(
-    private val repository: ExchangeRateRepository,
+    private val convertCurrency: ConvertCurrencyUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ConverterUiState())
     val state: StateFlow<ConverterUiState> = mutableState.asStateFlow()
@@ -149,7 +154,7 @@ class ConverterViewModel(
         val amount = form.amount.replace(",", ".").toBigDecimalOrNull() ?: return
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.convert(amount, form.from, form.to, form.date)) {
+            when (val result = convertCurrency(amount, form.from, form.to, form.date)) {
                 is AppResult.Success -> mutableState.update { it.copy(loading = false, result = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(loading = false, error = result.error) }
             }

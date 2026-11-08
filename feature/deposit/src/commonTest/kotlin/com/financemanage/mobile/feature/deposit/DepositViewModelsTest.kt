@@ -1,7 +1,10 @@
 package com.financemanage.mobile.feature.deposit
 
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.network.pending.PendingPoller
 import com.financemanage.mobile.core.testing.MockBackend
@@ -11,7 +14,16 @@ import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.ui.components.PendingAction
-import com.financemanage.mobile.feature.deposit.data.DepositRepository
+import com.financemanage.mobile.feature.deposit.data.DepositRepositoryImpl
+import com.financemanage.mobile.feature.deposit.domain.usecase.AwaitDepositRecordedUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.CreateDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.DeleteDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.GetDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.GetSettlementQuoteUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.ObserveDepositsUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.PreviewDepositUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.RefreshDepositsUseCase
+import com.financemanage.mobile.feature.deposit.domain.usecase.SettleDepositUseCase
 import com.financemanage.mobile.feature.deposit.presentation.DepositDetailViewModel
 import com.financemanage.mobile.feature.deposit.presentation.DepositFormViewModel
 import com.financemanage.mobile.feature.deposit.presentation.DepositListViewModel
@@ -39,15 +51,37 @@ private const val QUOTE =
 class DepositViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = DepositRepository(backend.client, cache, PendingPoller())
-    private val wallets = WalletRepository(backend.client, cache)
-    private val profiles = ProfileRepository(backend.client, cache)
+    private val repository = DepositRepositoryImpl(backend.client, cache, PendingPoller())
+    private val wallets = WalletRepositoryImpl(backend.client, cache)
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+
+    private fun formViewModel() =
+        DepositFormViewModel(
+            PreviewDepositUseCase(repository),
+            CreateDepositUseCase(repository),
+            AwaitDepositRecordedUseCase(repository),
+            GetCachedWalletsUseCase(wallets),
+            GetDefaultCurrencyUseCase(profiles),
+            GetTodayUseCase(profiles),
+        )
+
+    private fun detailViewModel(id: String) =
+        DepositDetailViewModel(
+            id,
+            GetDepositUseCase(repository),
+            GetSettlementQuoteUseCase(repository),
+            SettleDepositUseCase(repository),
+            AwaitDepositRecordedUseCase(repository),
+            DeleteDepositUseCase(repository),
+            GetCachedWalletsUseCase(wallets),
+            GetTodayUseCase(profiles),
+        )
 
     @Test
     fun listIsCached() =
         runViewModelTest {
             backend.get("deposits", "[${depositJson()}]")
-            val viewModel = DepositListViewModel(repository)
+            val viewModel = DepositListViewModel(ObserveDepositsUseCase(repository), RefreshDepositsUseCase(repository))
             viewModel.refresh()
             val deposit =
                 viewModel.state
@@ -68,7 +102,7 @@ class DepositViewModelsTest {
             backend.post("deposits", depositJson(funding = "PENDING"), HttpStatusCode.Created)
             backend.get("deposits", "[${depositJson()}]")
             backend.get("deposits/d1", depositJson(funding = "RECORDED"))
-            val viewModel = DepositFormViewModel(repository, wallets, profiles)
+            val viewModel = formViewModel()
             viewModel.state.awaitValue { it.openDate != null }
 
             viewModel.save()
@@ -96,7 +130,7 @@ class DepositViewModelsTest {
             backend.post("deposits", depositJson(), HttpStatusCode.Created)
             backend.get("deposits", "[]")
             backend.post("deposits/preview", "{}")
-            val viewModel = DepositFormViewModel(repository, wallets, profiles)
+            val viewModel = formViewModel()
             viewModel.state.awaitValue { it.openDate != null }
             viewModel.update {
                 it.copy(
@@ -128,7 +162,7 @@ class DepositViewModelsTest {
                 respondJson(QUOTE)
             }
             backend.get("deposits", "[]")
-            val viewModel = DepositDetailViewModel("d1", repository, wallets, profiles)
+            val viewModel = detailViewModel("d1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.deposit != null }
 
@@ -152,7 +186,7 @@ class DepositViewModelsTest {
             backend.get("deposits/d1", depositJson("RECORDED", "FAILED", "SETTLED"))
             backend.post("deposits/d1/settle", QUOTE)
             backend.get("deposits", "[]")
-            val viewModel = DepositDetailViewModel("d1", repository, wallets, profiles)
+            val viewModel = detailViewModel("d1")
             viewModel.settle(null, "w1")
             assertEquals(PendingAction.Failed(null), viewModel.state.awaitValue { !it.busy }.pending)
         }
@@ -166,7 +200,7 @@ class DepositViewModelsTest {
                 HttpStatusCode.UnprocessableEntity,
                 "DEPOSIT_SETTLED",
             )
-            val viewModel = DepositDetailViewModel("d1", repository, wallets, profiles)
+            val viewModel = detailViewModel("d1")
             viewModel.loadQuote(null)
             assertEquals(
                 "DEPOSIT_SETTLED",

@@ -2,8 +2,8 @@ package com.financemanage.mobile.core.data
 
 import com.financemanage.mobile.core.data.outbox.OutboxEntity
 import com.financemanage.mobile.core.data.outbox.OutboxSender
-import com.financemanage.mobile.core.data.outbox.OutboxStatus
 import com.financemanage.mobile.core.data.outbox.OutboxSync
+import com.financemanage.mobile.core.domain.model.OutboxStatus
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.testing.FakeNetworkMonitor

@@ -8,7 +8,7 @@ import org.koin.dsl.module
 
 val currencyModule =
     module {
-        viewModel { RatesViewModel(get()) }
+        viewModel { RatesViewModel(get(), get(), get()) }
         viewModel { params ->
             AddRateViewModel(params.values.getOrNull(0) as String?, params.values.getOrNull(1) as String?, get(), get())
         }

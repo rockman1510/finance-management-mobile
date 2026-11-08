@@ -10,8 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.session.SessionState
-import com.financemanage.mobile.core.data.settings.ThemeMode
+import com.financemanage.mobile.core.domain.model.SessionState
+import com.financemanage.mobile.core.domain.model.ThemeMode
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.feature.auth.presentation.AuthFlow
 import com.financemanage.mobile.feature.onboarding.presentation.OnboardingFlow

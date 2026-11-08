@@ -1,7 +1,13 @@
 package com.financemanage.mobile.feature.currency
 
-import com.financemanage.mobile.core.data.shared.ExchangeRateRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.data.shared.ExchangeRateRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.ConvertCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.DeleteExchangeRateUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
+import com.financemanage.mobile.core.domain.usecase.ObserveExchangeRatesUseCase
+import com.financemanage.mobile.core.domain.usecase.RefreshExchangeRatesUseCase
+import com.financemanage.mobile.core.domain.usecase.SaveExchangeRateUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.testing.MockBackend
@@ -28,15 +34,20 @@ private const val RATES =
 class CurrencyViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = ExchangeRateRepository(backend.client, cache)
-    private val profiles = ProfileRepository(backend.client, cache)
+    private val repository = ExchangeRateRepositoryImpl(backend.client, cache)
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
 
     @Test
     fun ratesLoadAndDeleteRefreshesTheList() =
         runViewModelTest {
             backend.get("exchange-rates", RATES)
             backend.delete("exchange-rates/r1")
-            val viewModel = RatesViewModel(repository)
+            val viewModel =
+                RatesViewModel(
+                    ObserveExchangeRatesUseCase(repository),
+                    RefreshExchangeRatesUseCase(repository),
+                    DeleteExchangeRateUseCase(repository),
+                )
             keepCollecting(viewModel.state)
 
             viewModel.refresh()
@@ -57,7 +68,8 @@ class CurrencyViewModelsTest {
         runViewModelTest {
             backend.post("exchange-rates", "{}", HttpStatusCode.Created)
             backend.get("exchange-rates", RATES)
-            val viewModel = AddRateViewModel("eur", "VND", repository, profiles)
+            val viewModel =
+                AddRateViewModel("eur", "VND", SaveExchangeRateUseCase(repository), GetTodayUseCase(profiles))
             val loaded = viewModel.state.awaitValue { it.date != null }
             assertEquals(CurrencyCode("EUR"), loaded.base)
 
@@ -88,7 +100,7 @@ class CurrencyViewModelsTest {
                 "exchange-rates/convert",
                 """{"amount":10,"from":"USD","to":"VND","rate":25400,"converted":254000,"date":"2026-11-01"}""",
             )
-            val viewModel = ConverterViewModel(repository)
+            val viewModel = ConverterViewModel(ConvertCurrencyUseCase(repository))
             viewModel.convert()
             assertTrue(backend.requests.isEmpty())
 

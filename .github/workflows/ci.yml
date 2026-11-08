@@ -57,7 +57,9 @@ jobs:
   ios:
     name: iOS build + tests
     runs-on: macos-latest
-    timeout-minutes: 60
+    # A cold Kotlin/Native build (no Gradle cache, e.g. after changes to the core modules) compiles and links a test
+    # binary for every module and needs more than an hour; a warm one takes about 35 minutes.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

@@ -74,9 +74,9 @@ import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
 import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.investment.data.AssetDto
-import com.financemanage.mobile.feature.investment.data.AssetTypes
-import com.financemanage.mobile.feature.investment.data.TradeKind
+import com.financemanage.mobile.feature.investment.domain.model.AssetDto
+import com.financemanage.mobile.feature.investment.domain.model.AssetTypes
+import com.financemanage.mobile.feature.investment.domain.model.TradeKind
 import com.financemanage.mobile.feature.investment.resources.Res
 import com.financemanage.mobile.feature.investment.resources.add_asset
 import com.financemanage.mobile.feature.investment.resources.allocation
@@ -214,7 +214,7 @@ fun PortfolioScreen(
 }
 
 @Composable
-private fun PortfolioCard(portfolio: com.financemanage.mobile.feature.investment.data.PortfolioDto) {
+private fun PortfolioCard(portfolio: com.financemanage.mobile.feature.investment.domain.model.PortfolioDto) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             InfoRow(stringResource(Res.string.market_value)) {

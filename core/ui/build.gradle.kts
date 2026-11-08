@@ -11,7 +11,7 @@ kotlin {
         }
         commonMain.dependencies {
             api(projects.core.model)
-            api(projects.core.data)
+            api(projects.core.domain)
             implementation(libs.androidx.lifecycle.runtime.compose)
         }
     }

@@ -76,7 +76,7 @@ import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.saving.data.GoalDto
+import com.financemanage.mobile.feature.saving.domain.model.GoalDto
 import com.financemanage.mobile.feature.saving.resources.Res
 import com.financemanage.mobile.feature.saving.resources.add_goal
 import com.financemanage.mobile.feature.saving.resources.auto_contribution

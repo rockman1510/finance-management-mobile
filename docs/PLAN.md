@@ -5,15 +5,34 @@ Source of truth for scope: `docs/Claude.md` (blueprint F01–F22) and `docs/MOBI
 ## Architecture
 
 ```
-composeApp ──► feature/* ──► core/ui ─────┐
-    │              │                      ▼
-    │              ├──────► core/data ─► core/network ─► core/model
+composeApp ──► feature/* ──► core/ui ──────────────┐
+    │              │                               ▼
+    │              ├──────► core/data ──► core/domain ──► core/model
+    │              │            └──────► core/network ──► core/model
     └──────────────┴──────────────────────────────────────────▲
 core/testing (tests only) ─► core/data, core/network, core/model
 ```
 
-- **Clean architecture inside each feature**: `presentation` (Compose screen + ViewModel, immutable state) →
-  `domain` (models, repository interfaces, use cases) → `data` (Ktor API, DTOs, repository implementation, Room cache).
+- **Call chain**: **UI (Compose screen) → ViewModel → UseCase → Repository**. Screens only talk to their ViewModel;
+  ViewModels depend **only on use cases** (never on a repository, `HttpClient`, DAO or `PushBridge`); use cases call
+  repository **interfaces** declared in the domain layer; the data layer implements them.
+- **Clean architecture inside each feature**:
+  - `domain/model` – models and inputs of the feature (plain Kotlin; wire-shaped types that mirror the API 1:1 keep
+    their `@Serializable` annotations and `…Dto`/`…Request` names, so there is no extra mapping layer).
+  - `domain/repository` – the `XxxRepository` interface.
+  - `domain/usecase` – one class per action with `operator fun invoke` (`ObserveBillsUseCase`, `PayBillUseCase`…).
+    Business rules that combine repositories live here (`ShouldSkipOnboardingUseCase`, `DeleteAccountUseCase`,
+    `RefreshHomeOverviewUseCase`, `DeleteTransactionOrTransferUseCase`…).
+  - `data` – Ktor calls, private DTOs and mappers, `XxxRepositoryImpl`, Room/JSON cache.
+  - `presentation` – Compose screens + ViewModels (immutable `UiState`).
+  - `di` – binds `XxxRepository` to `XxxRepositoryImpl` (`single`), use cases (`factoryOf`), ViewModels.
+- **Shared domain (`core/domain`)**: models (`Cached`, `UserPreferences`, `SessionState`, `PendingWrite`,
+  `NotificationLink`…), repository interfaces for shared data (`ProfileRepository`, `WalletRepository`,
+  `CategoryRepository`, `ExchangeRateRepository`, `AppSettingsRepository`, `SessionRepository`, `OutboxRepository`,
+  `PushRepository`, `NetworkMonitor`) and their use cases (`GetTodayUseCase`, `GetDefaultCurrencyUseCase`,
+  `ObserveWalletsUseCase`, `SignOutUseCase`…). `core/data` implements them (`…RepositoryImpl`) and registers the use
+  cases (`domainModule`). `core/domain` is pure Kotlin: no Ktor, Room, DataStore or Compose.
+- `Resource` / `ResourceHolder` (cached data + refresh state for a screen) are presentation helpers in `core/ui`.
 - **Offline-first, single source of truth**: screens observe Room; repositories fetch from the API and write to Room;
   writes that support it (transactions, transfers) go through an outbox with their Idempotency-Key (F21).
 - **Navigation**: one Activity (Android) / one `UIViewController` (iOS) hosting a Compose `NavHost` with type-safe

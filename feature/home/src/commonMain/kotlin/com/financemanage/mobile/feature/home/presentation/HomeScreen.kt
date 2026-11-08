@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.cache.Resource
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.Money
 import com.financemanage.mobile.core.model.domain.TransactionType
@@ -48,10 +47,11 @@ import com.financemanage.mobile.core.ui.components.RefreshOnResume
 import com.financemanage.mobile.core.ui.components.SectionHeader
 import com.financemanage.mobile.core.ui.components.SkeletonBlock
 import com.financemanage.mobile.core.ui.error.userMessage
+import com.financemanage.mobile.core.ui.state.Resource
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.home.data.HomeBill
-import com.financemanage.mobile.feature.home.data.HomeTransaction
+import com.financemanage.mobile.feature.home.domain.model.HomeBill
+import com.financemanage.mobile.feature.home.domain.model.HomeTransaction
 import com.financemanage.mobile.feature.home.resources.Res
 import com.financemanage.mobile.feature.home.resources.bills_due
 import com.financemanage.mobile.feature.home.resources.block_error

@@ -77,7 +77,7 @@ import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.bill.data.Bill
+import com.financemanage.mobile.feature.bill.domain.model.Bill
 import com.financemanage.mobile.feature.bill.resources.Res
 import com.financemanage.mobile.feature.bill.resources.add_bill
 import com.financemanage.mobile.feature.bill.resources.days_left

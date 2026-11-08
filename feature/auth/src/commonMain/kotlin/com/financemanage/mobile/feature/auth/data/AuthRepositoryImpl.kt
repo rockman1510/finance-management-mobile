@@ -8,8 +8,8 @@ import com.financemanage.mobile.core.network.api
 import com.financemanage.mobile.core.network.auth.AuthTokens
 import com.financemanage.mobile.core.network.auth.TokenPairDto
 import com.financemanage.mobile.core.network.error.apiCall
-import com.financemanage.mobile.feature.auth.domain.AuthRepository
-import com.financemanage.mobile.feature.auth.domain.LoginResult
+import com.financemanage.mobile.feature.auth.domain.model.LoginResult
+import com.financemanage.mobile.feature.auth.domain.repository.AuthRepository
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post

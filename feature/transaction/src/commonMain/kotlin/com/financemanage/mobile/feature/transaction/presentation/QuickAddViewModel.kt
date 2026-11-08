@@ -2,34 +2,34 @@ package com.financemanage.mobile.feature.transaction.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.settings.AppSettingsRepository
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.usecase.RememberFormChoicesUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
+import com.financemanage.mobile.core.model.IdempotencyKeyHolder
 import com.financemanage.mobile.core.model.domain.Category
 import com.financemanage.mobile.core.model.domain.CategoryType
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.model.domain.TransactionType
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toPlainString
-import com.financemanage.mobile.core.network.IdempotencyKeyHolder
 import com.financemanage.mobile.core.ui.components.AmountInput
 import com.financemanage.mobile.core.ui.components.KeypadKey
-import com.financemanage.mobile.feature.transaction.data.CreateRecurringRequest
-import com.financemanage.mobile.feature.transaction.data.CreateTransactionRequest
-import com.financemanage.mobile.feature.transaction.data.TransactionRepository
-import com.financemanage.mobile.feature.transaction.data.UpdateTransactionRequest
-import com.financemanage.mobile.feature.transaction.data.WriteOutcome
+import com.financemanage.mobile.feature.transaction.domain.model.CreateRecurringRequest
+import com.financemanage.mobile.feature.transaction.domain.model.CreateTransactionRequest
+import com.financemanage.mobile.feature.transaction.domain.model.UpdateTransactionRequest
+import com.financemanage.mobile.feature.transaction.domain.model.WriteOutcome
+import com.financemanage.mobile.feature.transaction.domain.usecase.CreateRecurringUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.CreateTransactionUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.GetTransactionUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.LoadTransactionFormUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.UpdateTransactionUseCase
+import com.financemanage.mobile.feature.transaction.domain.usecase.UploadReceiptUseCase
 import com.financemanage.mobile.feature.transaction.platform.PickedFile
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -93,11 +93,13 @@ sealed interface QuickAddEvent {
 class QuickAddViewModel(
     initialKind: String,
     private val transactionId: String?,
-    private val repository: TransactionRepository,
-    private val wallets: WalletRepository,
-    private val categories: CategoryRepository,
-    private val settings: AppSettingsRepository,
-    private val profiles: ProfileRepository,
+    loadTransactionForm: LoadTransactionFormUseCase,
+    private val getTransaction: GetTransactionUseCase,
+    private val createTransaction: CreateTransactionUseCase,
+    private val updateTransaction: UpdateTransactionUseCase,
+    private val createRecurring: CreateRecurringUseCase,
+    private val uploadReceipt: UploadReceiptUseCase,
+    private val rememberFormChoices: RememberFormChoicesUseCase,
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow(QuickAddUiState(isEdit = transactionId != null, isIncome = initialKind == "INCOME"))
@@ -108,20 +110,17 @@ class QuickAddViewModel(
 
     init {
         viewModelScope.launch {
-            val walletList =
-                wallets.wallets.first()?.value ?: (wallets.refresh() as? AppResult.Success)?.value.orEmpty()
-            val categoryList =
-                categories.categories.first()?.value ?: (categories.refresh() as? AppResult.Success)?.value.orEmpty()
-            val preferences = settings.preferences.first()
-            val today = today(profiles.current()?.timeZone)
+            val context = loadTransactionForm()
+            val walletList = context.wallets
+            val today = context.today
             val usable = walletList.filter { !it.archived }
             val walletId =
-                preferences.lastWalletId?.takeIf { id -> usable.any { it.id == id } } ?: usable.firstOrNull()?.id
+                context.lastWalletId?.takeIf { id -> usable.any { it.id == id } } ?: usable.firstOrNull()?.id
             mutableState.update {
                 it.copy(
                     wallets = usable,
-                    categories = categoryList,
-                    recentCategoryIds = preferences.recentCategoryIds,
+                    categories = context.categories,
+                    recentCategoryIds = context.recentCategoryIds,
                     walletId = walletId,
                     date = today,
                     today = today,
@@ -140,7 +139,7 @@ class QuickAddViewModel(
         id: String,
         allWallets: List<Wallet>,
     ) {
-        when (val result = repository.get(id)) {
+        when (val result = getTransaction(id)) {
             is AppResult.Success -> {
                 val transaction = result.value
                 val digits = transaction.amount.currency.fractionDigits
@@ -256,7 +255,7 @@ class QuickAddViewModel(
         form: QuickAddUiState,
     ) {
         val result =
-            repository.update(
+            updateTransaction(
                 id,
                 UpdateTransactionRequest(
                     walletId = form.walletId,
@@ -273,7 +272,7 @@ class QuickAddViewModel(
 
     private suspend fun saveRecurring(form: QuickAddUiState) {
         val result =
-            repository.createRecurring(
+            createRecurring(
                 CreateRecurringRequest(
                     walletId = requireNotNull(form.walletId),
                     categoryId = requireNotNull(form.categoryId),
@@ -306,7 +305,7 @@ class QuickAddViewModel(
                 ?.value
                 .orEmpty()
         val summary = "${form.category?.name.orEmpty()} · ${form.amount.display} $currencyCode"
-        when (val result = repository.create(request, idempotency.current(), summary)) {
+        when (val result = createTransaction(request, idempotency.current(), summary)) {
             is AppResult.Failure -> mutableState.update { it.copy(saving = false, error = result.error) }
             is AppResult.Success -> {
                 val (outcome, transaction) = result.value
@@ -326,7 +325,7 @@ class QuickAddViewModel(
     ) {
         files.forEachIndexed { index, file ->
             mutableState.update { it.copy(uploadProgress = index + 1 to files.size) }
-            val result = repository.uploadAttachment(transactionId, file.bytes, file.fileName, file.contentType)
+            val result = uploadReceipt(transactionId, file.bytes, file.fileName, file.contentType)
             if (result is AppResult.Failure) mutableState.update { it.copy(error = result.error) }
         }
         mutableState.update { it.copy(uploadProgress = null) }
@@ -334,8 +333,7 @@ class QuickAddViewModel(
 
     private suspend fun afterCreate(form: QuickAddUiState) {
         idempotency.reset()
-        form.categoryId?.let { settings.rememberCategory(it) }
-        form.walletId?.let { settings.setLastWallet(it) }
+        val recentCategoryIds = rememberFormChoices(form.categoryId, form.walletId)
         if (form.addAnother) {
             mutableState.update {
                 it.copy(
@@ -345,7 +343,7 @@ class QuickAddViewModel(
                     withPerson = "",
                     files = emptyList(),
                     repeat = RepeatSettings(),
-                    recentCategoryIds = settings.preferences.first().recentCategoryIds,
+                    recentCategoryIds = recentCategoryIds,
                 )
             }
             eventChannel.send(QuickAddEvent.SavedAndCleared)

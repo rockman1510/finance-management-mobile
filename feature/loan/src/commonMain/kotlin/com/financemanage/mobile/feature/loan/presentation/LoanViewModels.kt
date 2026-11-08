@@ -2,21 +2,28 @@ package com.financemanage.mobile.feature.loan.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.memoryResource
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
-import com.financemanage.mobile.core.model.time.today
+import com.financemanage.mobile.core.model.IdempotencyKeyHolder
 import com.financemanage.mobile.core.model.toBigDecimalOrNull
-import com.financemanage.mobile.core.network.IdempotencyKeyHolder
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.loan.data.CreateLoanRequest
-import com.financemanage.mobile.feature.loan.data.LoanDetailDto
-import com.financemanage.mobile.feature.loan.data.LoanRepository
-import com.financemanage.mobile.feature.loan.data.LoanSummaryDto
-import com.financemanage.mobile.feature.loan.data.SchedulePreviewDto
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.memoryResource
+import com.financemanage.mobile.feature.loan.domain.model.CreateLoanRequest
+import com.financemanage.mobile.feature.loan.domain.model.LoanDetailDto
+import com.financemanage.mobile.feature.loan.domain.model.LoanSummaryDto
+import com.financemanage.mobile.feature.loan.domain.model.SchedulePreviewDto
+import com.financemanage.mobile.feature.loan.domain.usecase.ChangeLoanRateUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.CreateLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.DeleteLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.GetLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.GetLoansUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.PrepayLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.PreviewLoanScheduleUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.RepayLoanUseCase
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,9 +33,9 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
 class LoanListViewModel(
-    repository: LoanRepository,
+    getLoans: GetLoansUseCase,
 ) : ViewModel() {
-    private val holder = viewModelScope.memoryResource { repository.list() }
+    private val holder = viewModelScope.memoryResource { getLoans() }
     val state: StateFlow<Resource<List<LoanSummaryDto>>> = holder.state
 
     fun refresh() = holder.refresh()
@@ -54,21 +61,19 @@ data class LoanFormUiState(
 )
 
 class LoanFormViewModel(
-    private val repository: LoanRepository,
-    profiles: ProfileRepository,
+    private val previewLoanSchedule: PreviewLoanScheduleUseCase,
+    private val createLoan: CreateLoanUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(LoanFormUiState())
     val state: StateFlow<LoanFormUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val profile = profiles.current()
-            mutableState.update {
-                it.copy(
-                    currency = profile?.defaultCurrency ?: CurrencyCode.DEFAULT,
-                    startDate = today(profile?.timeZone),
-                )
-            }
+            val currency = getDefaultCurrency()
+            val startDate = getToday()
+            mutableState.update { it.copy(currency = currency, startDate = startDate) }
         }
     }
 
@@ -100,7 +105,7 @@ class LoanFormViewModel(
 
     fun preview() =
         call { request ->
-            repository.preview(request).also { r ->
+            previewLoanSchedule(request).also { r ->
                 (r as? AppResult.Success)?.let {
                     mutableState.update { it.copy(preview = r.value) }
                 }
@@ -109,7 +114,7 @@ class LoanFormViewModel(
 
     fun save() =
         call { request ->
-            repository.create(request).also { r ->
+            createLoan(request).also { r ->
                 (r as? AppResult.Success)?.let {
                     mutableState.update { it.copy(createdId = r.value.summary.id) }
                 }
@@ -142,8 +147,12 @@ data class LoanDetailUiState(
 
 class LoanDetailViewModel(
     private val id: String,
-    private val repository: LoanRepository,
-    profiles: ProfileRepository,
+    private val getLoan: GetLoanUseCase,
+    private val repayLoan: RepayLoanUseCase,
+    private val prepayLoan: PrepayLoanUseCase,
+    private val changeLoanRate: ChangeLoanRateUseCase,
+    private val deleteLoan: DeleteLoanUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(LoanDetailUiState())
     val state: StateFlow<LoanDetailUiState> = mutableState.asStateFlow()
@@ -152,12 +161,15 @@ class LoanDetailViewModel(
     private val idempotency = IdempotencyKeyHolder()
 
     init {
-        viewModelScope.launch { mutableState.update { it.copy(today = today(profiles.current()?.timeZone)) } }
+        viewModelScope.launch {
+            val today = getToday()
+            mutableState.update { it.copy(today = today) }
+        }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            when (val result = repository.get(id)) {
+            when (val result = getLoan(id)) {
                 is AppResult.Success -> mutableState.update { it.copy(loan = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(error = result.error) }
             }
@@ -177,9 +189,9 @@ class LoanDetailViewModel(
         viewModelScope.launch {
             val result =
                 when (action) {
-                    LoanAction.REPAY -> repository.repay(id, amount, date, idempotency.current())
-                    LoanAction.PREPAY -> repository.prepay(id, amount, date, idempotency.current())
-                    LoanAction.RATE -> repository.changeRate(id, requireNotNull(date), amount)
+                    LoanAction.REPAY -> repayLoan(id, amount, date, idempotency.current())
+                    LoanAction.PREPAY -> prepayLoan(id, amount, date, idempotency.current())
+                    LoanAction.RATE -> changeLoanRate(id, requireNotNull(date), amount)
                 }
             if (result is AppResult.Success) idempotency.reset()
             mutableState.update { it.copy(busy = false, error = (result as? AppResult.Failure)?.error) }
@@ -189,7 +201,7 @@ class LoanDetailViewModel(
 
     fun delete() {
         viewModelScope.launch {
-            val result = repository.delete(id)
+            val result = deleteLoan(id)
             mutableState.update {
                 it.copy(
                     deleted = result is AppResult.Success,

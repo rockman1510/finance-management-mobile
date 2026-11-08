@@ -4,9 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
-import com.financemanage.mobile.feature.auth.domain.AuthRepository
-import com.financemanage.mobile.feature.auth.domain.AuthRules
-import com.financemanage.mobile.feature.auth.domain.LoginResult
+import com.financemanage.mobile.feature.auth.domain.model.AuthRules
+import com.financemanage.mobile.feature.auth.domain.model.LoginResult
+import com.financemanage.mobile.feature.auth.domain.usecase.RequestPasswordResetUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.ResetPasswordUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.SignInUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.SignInWithGoogleUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.SignUpUseCase
+import com.financemanage.mobile.feature.auth.domain.usecase.VerifyTwoFactorUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -42,7 +47,8 @@ sealed interface SignInEvent {
 }
 
 class SignInViewModel(
-    private val repository: AuthRepository,
+    private val signInUseCase: SignInUseCase,
+    private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(SignInUiState())
     val state: StateFlow<SignInUiState> = mutableState.asStateFlow()
@@ -64,7 +70,7 @@ class SignInViewModel(
             mutableState.update { it.copy(emailProblem = emailProblem, passwordProblem = passwordProblem) }
             return
         }
-        run { repository.login(current.email, current.password) }
+        run { signInUseCase(current.email, current.password) }
     }
 
     /** [idToken] is `null` when the user cancelled or Google returned nothing. */
@@ -73,7 +79,7 @@ class SignInViewModel(
             mutableState.update { it.copy(googleFailed = true) }
             return
         }
-        run { repository.loginWithGoogle(idToken) }
+        run { signInWithGoogleUseCase(idToken) }
     }
 
     private fun run(call: suspend () -> AppResult<LoginResult>) {
@@ -109,7 +115,7 @@ data class SignUpUiState(
 )
 
 class SignUpViewModel(
-    private val repository: AuthRepository,
+    private val signUpUseCase: SignUpUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(SignUpUiState())
     val state: StateFlow<SignUpUiState> = mutableState.asStateFlow()
@@ -138,7 +144,7 @@ class SignUpViewModel(
         if (current.loading) return
         mutableState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val result = repository.register(current.fullName, current.email, current.password)
+            val result = signUpUseCase(current.fullName, current.email, current.password)
             mutableState.update { it.copy(loading = false, error = (result as? AppResult.Failure)?.error) }
         }
     }
@@ -155,7 +161,7 @@ data class TwoFactorUiState(
 )
 
 class TwoFactorViewModel(
-    private val repository: AuthRepository,
+    private val verifyTwoFactorUseCase: VerifyTwoFactorUseCase,
     private val challengeToken: String,
     expiresInSeconds: Long,
 ) : ViewModel() {
@@ -184,7 +190,7 @@ class TwoFactorViewModel(
         mutableState.update { it.copy(loading = true, error = null) }
         verifyJob =
             viewModelScope.launch {
-                val result = repository.verifyTwoFactor(challengeToken, current.code)
+                val result = verifyTwoFactorUseCase(challengeToken, current.code)
                 val error = (result as? AppResult.Failure)?.error
                 // A 401 here means a wrong code; after 5 wrong codes the challenge expires (API §4.1).
                 mutableState.update {
@@ -220,7 +226,8 @@ data class ForgotPasswordUiState(
 )
 
 class ForgotPasswordViewModel(
-    private val repository: AuthRepository,
+    private val requestPasswordResetUseCase: RequestPasswordResetUseCase,
+    private val resetPasswordUseCase: ResetPasswordUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ForgotPasswordUiState())
     val state: StateFlow<ForgotPasswordUiState> = mutableState.asStateFlow()
@@ -240,7 +247,7 @@ class ForgotPasswordViewModel(
             mutableState.update { it.copy(emailProblem = FieldProblem.EMAIL_INVALID) }
             return
         }
-        launchCall({ repository.forgotPassword(current.email) }) { it.copy(codeSent = true) }
+        launchCall({ requestPasswordResetUseCase(current.email) }) { it.copy(codeSent = true) }
     }
 
     fun reset() {
@@ -251,7 +258,7 @@ class ForgotPasswordViewModel(
         }
         if (current.code.length != AuthRules.CODE_LENGTH) return
         launchCall(
-            { repository.resetPassword(current.email, current.code, current.newPassword) },
+            { resetPasswordUseCase(current.email, current.code, current.newPassword) },
         ) { it.copy(done = true) }
     }
 

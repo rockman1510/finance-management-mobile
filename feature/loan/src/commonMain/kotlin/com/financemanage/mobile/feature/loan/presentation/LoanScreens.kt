@@ -70,8 +70,8 @@ import com.financemanage.mobile.core.ui.theme.FinanceTheme
 import com.financemanage.mobile.core.ui.theme.LocalHideBalances
 import com.financemanage.mobile.core.ui.theme.LocalIsOnline
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.loan.data.InstallmentDto
-import com.financemanage.mobile.feature.loan.data.LoanSummaryDto
+import com.financemanage.mobile.feature.loan.domain.model.InstallmentDto
+import com.financemanage.mobile.feature.loan.domain.model.LoanSummaryDto
 import com.financemanage.mobile.feature.loan.resources.Res
 import com.financemanage.mobile.feature.loan.resources.active
 import com.financemanage.mobile.feature.loan.resources.add_loan
@@ -542,7 +542,7 @@ fun LoanDetailScreen(
 @Composable
 private fun ActionSheet(
     action: LoanAction,
-    loan: com.financemanage.mobile.feature.loan.data.LoanDetailDto,
+    loan: com.financemanage.mobile.feature.loan.domain.model.LoanDetailDto,
     today: LocalDate?,
     onConfirm: (BigDecimal, LocalDate?) -> Unit,
     onDismiss: () -> Unit,

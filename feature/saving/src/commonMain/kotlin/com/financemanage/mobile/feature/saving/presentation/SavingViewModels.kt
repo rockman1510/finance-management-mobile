@@ -2,39 +2,47 @@ package com.financemanage.mobile.feature.saving.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.financemanage.mobile.core.data.cache.Resource
-import com.financemanage.mobile.core.data.cache.ResourceHolder
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.AppResult
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.model.domain.Frequency
 import com.financemanage.mobile.core.model.domain.Wallet
-import com.financemanage.mobile.core.model.time.today
 import com.financemanage.mobile.core.model.toPlainString
 import com.financemanage.mobile.core.ui.components.PendingAction
 import com.financemanage.mobile.core.ui.components.parseAmountInput
-import com.financemanage.mobile.feature.saving.data.AutoContributionRequest
-import com.financemanage.mobile.feature.saving.data.CreateGoalRequest
-import com.financemanage.mobile.feature.saving.data.GoalDto
-import com.financemanage.mobile.feature.saving.data.MoveRequest
-import com.financemanage.mobile.feature.saving.data.RoundUpRequest
-import com.financemanage.mobile.feature.saving.data.SavingRepository
-import com.financemanage.mobile.feature.saving.data.UpdateGoalRequest
+import com.financemanage.mobile.core.ui.state.Resource
+import com.financemanage.mobile.core.ui.state.ResourceHolder
+import com.financemanage.mobile.feature.saving.domain.model.AutoContributionRequest
+import com.financemanage.mobile.feature.saving.domain.model.CreateGoalRequest
+import com.financemanage.mobile.feature.saving.domain.model.GoalDto
+import com.financemanage.mobile.feature.saving.domain.model.MoveRequest
+import com.financemanage.mobile.feature.saving.domain.model.RoundUpRequest
+import com.financemanage.mobile.feature.saving.domain.model.UpdateGoalRequest
+import com.financemanage.mobile.feature.saving.domain.usecase.CreateGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.DeleteGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.GetGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.MoveGoalMoneyUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.ObserveGoalsUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.RefreshGoalsUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.UpdateAutoContributionUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.UpdateGoalUseCase
+import com.financemanage.mobile.feature.saving.domain.usecase.UpdateRoundUpUseCase
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
 class GoalListViewModel(
-    private val repository: SavingRepository,
+    observeGoals: ObserveGoalsUseCase,
+    refreshGoals: RefreshGoalsUseCase,
 ) : ViewModel() {
-    private val holder = ResourceHolder(viewModelScope, repository.goals) { repository.refresh() }
+    private val holder = ResourceHolder(viewModelScope, observeGoals()) { refreshGoals() }
     val state: StateFlow<Resource<List<GoalDto>>> = holder.state
 
     fun refresh() = holder.refresh()
@@ -56,9 +64,14 @@ data class GoalDetailUiState(
 
 class GoalDetailViewModel(
     private val id: String,
-    private val repository: SavingRepository,
-    wallets: WalletRepository,
-    profiles: ProfileRepository,
+    private val getGoal: GetGoalUseCase,
+    private val refreshGoals: RefreshGoalsUseCase,
+    private val moveGoalMoney: MoveGoalMoneyUseCase,
+    private val updateAutoContribution: UpdateAutoContributionUseCase,
+    private val updateRoundUp: UpdateRoundUpUseCase,
+    private val deleteGoal: DeleteGoalUseCase,
+    getCachedWallets: GetCachedWalletsUseCase,
+    getToday: GetTodayUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(GoalDetailUiState())
     val state: StateFlow<GoalDetailUiState> = mutableState.asStateFlow()
@@ -68,10 +81,10 @@ class GoalDetailViewModel(
             mutableState.update {
                 it.copy(
                     wallets =
-                        wallets.wallets.first()?.value.orEmpty().filter { w ->
+                        getCachedWallets().filter { w ->
                             !w.archived
                         },
-                    today = today(profiles.current()?.timeZone),
+                    today = getToday(),
                 )
             }
         }
@@ -79,7 +92,7 @@ class GoalDetailViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            when (val result = repository.get(id)) {
+            when (val result = getGoal(id)) {
                 is AppResult.Success -> mutableState.update { it.copy(goal = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(error = result.error) }
             }
@@ -95,7 +108,7 @@ class GoalDetailViewModel(
         val before = mutableState.value.goal?.percent ?: 0
         mutableState.update { it.copy(busy = true, pending = PendingAction.Processing, error = null, milestone = null) }
         viewModelScope.launch {
-            when (val result = repository.move(id, deposit, MoveRequest(amount, walletId, date))) {
+            when (val result = moveGoalMoney(id, deposit, MoveRequest(amount, walletId, date))) {
                 is AppResult.Failure ->
                     mutableState.update {
                         it.copy(
@@ -114,7 +127,7 @@ class GoalDetailViewModel(
     }
 
     private suspend fun refreshAndCelebrate(before: Int) {
-        val goal = (repository.get(id) as? AppResult.Success)?.value ?: return
+        val goal = (getGoal(id) as? AppResult.Success)?.value ?: return
         val milestone =
             when {
                 before < FULL && goal.percent >= FULL -> Milestone.REACHED
@@ -129,20 +142,20 @@ class GoalDetailViewModel(
         walletId: String,
         frequency: Frequency,
         startDate: LocalDate?,
-    ) = act { repository.setAutoContribution(id, AutoContributionRequest(amount, walletId, frequency, startDate)) }
+    ) = act { updateAutoContribution(id, AutoContributionRequest(amount, walletId, frequency, startDate)) }
 
-    fun stopAutoContribution() = act { repository.stopAutoContribution(id) }
+    fun stopAutoContribution() = act { updateAutoContribution(id, null) }
 
     fun setRoundUp(
         walletId: String,
         unit: BigDecimal,
-    ) = act { repository.setRoundUp(id, RoundUpRequest(walletId, unit)) }
+    ) = act { updateRoundUp(id, RoundUpRequest(walletId, unit)) }
 
-    fun stopRoundUp() = act { repository.stopRoundUp(id) }
+    fun stopRoundUp() = act { updateRoundUp(id, null) }
 
     fun delete() {
         viewModelScope.launch {
-            val result = repository.delete(id)
+            val result = deleteGoal(id)
             mutableState.update {
                 it.copy(
                     deleted = result is AppResult.Success,
@@ -161,7 +174,7 @@ class GoalDetailViewModel(
                 is AppResult.Success -> mutableState.update { it.copy(busy = false, goal = result.value) }
                 is AppResult.Failure -> mutableState.update { it.copy(busy = false, error = result.error) }
             }
-            repository.refresh()
+            refreshGoals()
         }
     }
 
@@ -187,17 +200,20 @@ data class GoalFormUiState(
 
 class GoalFormViewModel(
     private val id: String?,
-    private val repository: SavingRepository,
-    profiles: ProfileRepository,
+    getGoal: GetGoalUseCase,
+    private val createGoal: CreateGoalUseCase,
+    private val updateGoal: UpdateGoalUseCase,
+    getDefaultCurrency: GetDefaultCurrencyUseCase,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(GoalFormUiState(isEdit = id != null))
     val state: StateFlow<GoalFormUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            mutableState.update { it.copy(currency = profiles.current()?.defaultCurrency ?: CurrencyCode.DEFAULT) }
+            val currency = getDefaultCurrency()
+            mutableState.update { it.copy(currency = currency) }
             if (id != null) {
-                (repository.get(id) as? AppResult.Success)?.value?.let { goal ->
+                (getGoal(id) as? AppResult.Success)?.value?.let { goal ->
                     mutableState.update {
                         it.copy(
                             name = goal.name,
@@ -237,10 +253,10 @@ class GoalFormViewModel(
         viewModelScope.launch {
             val result =
                 if (id == null) {
-                    repository.create(CreateGoalRequest(form.name.trim(), target, form.currency.value, form.deadline))
+                    createGoal(CreateGoalRequest(form.name.trim(), target, form.currency.value, form.deadline))
                 } else {
                     val clear = form.hadDeadline && form.deadline == null
-                    repository.update(
+                    updateGoal(
                         id,
                         UpdateGoalRequest(form.name.trim(), target, form.deadline, clear.takeIf { it }),
                     )

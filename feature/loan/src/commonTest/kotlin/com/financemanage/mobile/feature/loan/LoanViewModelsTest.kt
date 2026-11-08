@@ -1,13 +1,23 @@
 package com.financemanage.mobile.feature.loan
 
-import com.financemanage.mobile.core.data.shared.ProfileRepository
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.network.IDEMPOTENCY_KEY_HEADER
 import com.financemanage.mobile.core.testing.MockBackend
 import com.financemanage.mobile.core.testing.awaitValue
 import com.financemanage.mobile.core.testing.bodyField
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
-import com.financemanage.mobile.feature.loan.data.LoanRepository
+import com.financemanage.mobile.feature.loan.data.LoanRepositoryImpl
+import com.financemanage.mobile.feature.loan.domain.usecase.ChangeLoanRateUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.CreateLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.DeleteLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.GetLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.GetLoansUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.PrepayLoanUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.PreviewLoanScheduleUseCase
+import com.financemanage.mobile.feature.loan.domain.usecase.RepayLoanUseCase
 import com.financemanage.mobile.feature.loan.presentation.LoanAction
 import com.financemanage.mobile.feature.loan.presentation.LoanDetailViewModel
 import com.financemanage.mobile.feature.loan.presentation.LoanFormViewModel
@@ -36,14 +46,33 @@ private const val DETAIL = """{"summary":$SUMMARY,"installments":[$INSTALLMENT],
 
 class LoanViewModelsTest {
     private val backend = MockBackend()
-    private val repository = LoanRepository(backend.client)
-    private val profiles = ProfileRepository(backend.client, testJsonCache())
+    private val repository = LoanRepositoryImpl(backend.client)
+    private val profiles = ProfileRepositoryImpl(backend.client, testJsonCache())
+
+    private fun formViewModel() =
+        LoanFormViewModel(
+            PreviewLoanScheduleUseCase(repository),
+            CreateLoanUseCase(repository),
+            GetDefaultCurrencyUseCase(profiles),
+            GetTodayUseCase(profiles),
+        )
+
+    private fun detailViewModel(id: String) =
+        LoanDetailViewModel(
+            id,
+            GetLoanUseCase(repository),
+            RepayLoanUseCase(repository),
+            PrepayLoanUseCase(repository),
+            ChangeLoanRateUseCase(repository),
+            DeleteLoanUseCase(repository),
+            GetTodayUseCase(profiles),
+        )
 
     @Test
     fun listLoads() =
         runViewModelTest {
             backend.get("loans", "[$SUMMARY]")
-            val viewModel = LoanListViewModel(repository)
+            val viewModel = LoanListViewModel(GetLoansUseCase(repository))
             viewModel.refresh()
             assertEquals(
                 1,
@@ -60,7 +89,7 @@ class LoanViewModelsTest {
         runViewModelTest {
             backend.post("loans/preview-schedule", """{"installments":[$INSTALLMENT],"currency":"VND"}""")
             backend.post("loans", DETAIL, HttpStatusCode.Created)
-            val viewModel = LoanFormViewModel(repository, profiles)
+            val viewModel = formViewModel()
             viewModel.state.awaitValue { it.startDate != null }
 
             viewModel.preview()
@@ -99,7 +128,7 @@ class LoanViewModelsTest {
     fun interestFreeLoansSendNoRate() =
         runViewModelTest {
             backend.post("loans", DETAIL, HttpStatusCode.Created)
-            val viewModel = LoanFormViewModel(repository, profiles)
+            val viewModel = formViewModel()
             viewModel.state.awaitValue { it.startDate != null }
             viewModel.update {
                 it.copy(
@@ -122,7 +151,7 @@ class LoanViewModelsTest {
         runViewModelTest {
             backend.get("loans/l1", DETAIL)
             backend.fail(HttpMethod.Post, "loans/l1/repayments", HttpStatusCode.InternalServerError, "INTERNAL_ERROR")
-            val viewModel = LoanDetailViewModel("l1", repository, profiles)
+            val viewModel = detailViewModel("l1")
             viewModel.refresh()
             viewModel.state.awaitValue { it.loan != null }
             val amount = BigDecimal.parseString("4080265")
@@ -158,7 +187,7 @@ class LoanViewModelsTest {
         runViewModelTest {
             backend.post("loans/l1/rate-changes", DETAIL)
             backend.get("loans/l1", DETAIL)
-            val viewModel = LoanDetailViewModel("l1", repository, profiles)
+            val viewModel = detailViewModel("l1")
             viewModel.perform(LoanAction.RATE, BigDecimal.parseString("9.5"), null)
             assertFalse(viewModel.state.value.busy)
             assertTrue(backend.requests.isEmpty())

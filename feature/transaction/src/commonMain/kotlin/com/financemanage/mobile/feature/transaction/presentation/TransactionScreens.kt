@@ -28,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.financemanage.mobile.core.data.outbox.OutboxStatus
 import com.financemanage.mobile.core.model.domain.CategoryType
 import com.financemanage.mobile.core.model.time.toDisplayString
 import com.financemanage.mobile.core.ui.components.AmountTextField
@@ -62,7 +61,7 @@ import com.financemanage.mobile.core.ui.resources.field_invalid_amount
 import com.financemanage.mobile.core.ui.resources.field_note
 import com.financemanage.mobile.core.ui.resources.field_wallet
 import com.financemanage.mobile.core.ui.theme.Spacing
-import com.financemanage.mobile.feature.transaction.domain.Attachment
+import com.financemanage.mobile.feature.transaction.domain.model.Attachment
 import com.financemanage.mobile.feature.transaction.resources.Res
 import com.financemanage.mobile.feature.transaction.resources.active
 import com.financemanage.mobile.feature.transaction.resources.amount_received
@@ -358,7 +357,7 @@ fun RecurringListScreen(
     }
 }
 
-private fun com.financemanage.mobile.feature.transaction.domain.Recurring.signedAmount() =
+private fun com.financemanage.mobile.feature.transaction.domain.model.Recurring.signedAmount() =
     if (type.isInflow) amount else -amount
 
 @Composable
@@ -453,7 +452,7 @@ fun OutboxScreen(
         }
         LazyColumn(Modifier.padding(padding)) {
             items(pending, key = { it.id }) { entry ->
-                val failed = entry.status == OutboxStatus.FAILED.name
+                val failed = entry.failed
                 val errorColor = MaterialTheme.colorScheme.error
                 ListItem(
                     headlineContent = { Text(entry.summary) },

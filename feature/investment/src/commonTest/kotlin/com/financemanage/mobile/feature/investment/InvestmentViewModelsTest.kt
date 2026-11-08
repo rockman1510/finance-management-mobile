@@ -1,8 +1,12 @@
 package com.financemanage.mobile.feature.investment
 
-import com.financemanage.mobile.core.data.shared.CategoryRepository
-import com.financemanage.mobile.core.data.shared.ProfileRepository
-import com.financemanage.mobile.core.data.shared.WalletRepository
+import com.financemanage.mobile.core.data.shared.CategoryRepositoryImpl
+import com.financemanage.mobile.core.data.shared.ProfileRepositoryImpl
+import com.financemanage.mobile.core.data.shared.WalletRepositoryImpl
+import com.financemanage.mobile.core.domain.usecase.GetCachedCategoriesUseCase
+import com.financemanage.mobile.core.domain.usecase.GetCachedWalletsUseCase
+import com.financemanage.mobile.core.domain.usecase.GetDefaultCurrencyUseCase
+import com.financemanage.mobile.core.domain.usecase.GetTodayUseCase
 import com.financemanage.mobile.core.model.AppError
 import com.financemanage.mobile.core.model.CurrencyCode
 import com.financemanage.mobile.core.network.pending.PendingPoller
@@ -15,8 +19,17 @@ import com.financemanage.mobile.core.testing.respondJson
 import com.financemanage.mobile.core.testing.runViewModelTest
 import com.financemanage.mobile.core.testing.testJsonCache
 import com.financemanage.mobile.core.ui.components.PendingAction
-import com.financemanage.mobile.feature.investment.data.InvestmentRepository
-import com.financemanage.mobile.feature.investment.data.TradeKind
+import com.financemanage.mobile.feature.investment.data.InvestmentRepositoryImpl
+import com.financemanage.mobile.feature.investment.domain.model.TradeKind
+import com.financemanage.mobile.feature.investment.domain.usecase.CreateAssetUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.DeleteAssetUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.GetAssetUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.GetPortfolioUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.ObserveAssetsUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.RecordTradeUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.RefreshAssetsUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.UpdateAssetPriceUseCase
+import com.financemanage.mobile.feature.investment.domain.usecase.UpdateAssetUseCase
 import com.financemanage.mobile.feature.investment.presentation.AssetDetailViewModel
 import com.financemanage.mobile.feature.investment.presentation.AssetFormViewModel
 import com.financemanage.mobile.feature.investment.presentation.PortfolioViewModel
@@ -41,19 +54,44 @@ private fun trade(cashStatus: String) =
 class InvestmentViewModelsTest {
     private val backend = MockBackend()
     private val cache = testJsonCache()
-    private val repository = InvestmentRepository(backend.client, cache, PendingPoller())
-    private val profiles = ProfileRepository(backend.client, cache)
-    private val wallets = WalletRepository(backend.client, cache)
-    private val categories = CategoryRepository(backend.client, cache)
+    private val repository = InvestmentRepositoryImpl(backend.client, cache, PendingPoller())
+    private val profiles = ProfileRepositoryImpl(backend.client, cache)
+    private val wallets = WalletRepositoryImpl(backend.client, cache)
+    private val categories = CategoryRepositoryImpl(backend.client, cache)
 
-    private fun detail() = AssetDetailViewModel("a1", repository, wallets, categories, profiles)
+    private fun detail() =
+        AssetDetailViewModel(
+            "a1",
+            GetAssetUseCase(repository),
+            UpdateAssetPriceUseCase(repository),
+            RecordTradeUseCase(repository),
+            DeleteAssetUseCase(repository),
+            GetCachedWalletsUseCase(wallets),
+            GetCachedCategoriesUseCase(categories),
+            GetTodayUseCase(profiles),
+        )
+
+    private fun formViewModel(id: String?) =
+        AssetFormViewModel(
+            id,
+            GetAssetUseCase(repository),
+            CreateAssetUseCase(repository),
+            UpdateAssetUseCase(repository),
+            GetDefaultCurrencyUseCase(profiles),
+        )
 
     @Test
     fun portfolioLoadsInTheChosenCurrency() =
         runViewModelTest {
             backend.get("investments", "[${assetJson()}]")
             backend.get("investments/portfolio", """{"currency":"VND","marketValue":13000000}""")
-            val viewModel = PortfolioViewModel(repository, profiles)
+            val viewModel =
+                PortfolioViewModel(
+                    ObserveAssetsUseCase(repository),
+                    RefreshAssetsUseCase(repository),
+                    GetPortfolioUseCase(repository),
+                    GetDefaultCurrencyUseCase(profiles),
+                )
             keepCollecting(viewModel.state)
             viewModel.refresh()
             val state = viewModel.state.awaitValue { it.assets.data != null && it.portfolio != null }
@@ -176,7 +214,7 @@ class InvestmentViewModelsTest {
         runViewModelTest {
             backend.post("investments", assetJson(), HttpStatusCode.Created)
             backend.get("investments", "[]")
-            val create = AssetFormViewModel(null, repository, profiles)
+            val create = formViewModel(null)
             create.save()
             assertTrue(create.state.value.nameMissing)
             create.update { it.copy(name = "FPT", symbol = "fpt", type = "STOCK") }
@@ -186,7 +224,7 @@ class InvestmentViewModelsTest {
 
             backend.get("investments/a1", assetJson())
             backend.patch("investments/a1", assetJson())
-            val edit = AssetFormViewModel("a1", repository, profiles)
+            val edit = formViewModel("a1")
             edit.state.awaitValue { it.name == "FPT" }
             edit.update { it.copy(note = "Dài hạn") }
             edit.save()
